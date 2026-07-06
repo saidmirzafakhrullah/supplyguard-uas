@@ -9,8 +9,9 @@
         <div class="card sg-card p-4">
             <div class="d-flex justify-content-between align-items-center">
                 <div>
-                    <small class="text-muted">Countries Monitored</small>
+                    <small class="text-muted">Global Countries</small>
                     <h3 class="fw-bold mb-0">{{ $summary['countries'] }}</h3>
+                    <small class="text-muted">All countries dataset</small>
                 </div>
                 <div class="sg-stat-icon">
                     <i class="bi bi-globe2"></i>
@@ -25,6 +26,7 @@
                 <div>
                     <small class="text-muted">Global Ports</small>
                     <h3 class="fw-bold mb-0">{{ $summary['ports'] }}</h3>
+                    <small class="text-muted">Port monitoring</small>
                 </div>
                 <div class="sg-stat-icon">
                     <i class="bi bi-geo-alt"></i>
@@ -39,6 +41,7 @@
                 <div>
                     <small class="text-muted">News Intelligence</small>
                     <h3 class="fw-bold mb-0">{{ $summary['news'] }}</h3>
+                    <small class="text-muted">Cached articles</small>
                 </div>
                 <div class="sg-stat-icon">
                     <i class="bi bi-newspaper"></i>
@@ -53,6 +56,7 @@
                 <div>
                     <small class="text-muted">Average Risk</small>
                     <h3 class="fw-bold mb-0">{{ $summary['average_risk'] }}%</h3>
+                    <small class="text-muted">Supply chain risk</small>
                 </div>
                 <div class="sg-stat-icon">
                     <i class="bi bi-activity"></i>
@@ -104,7 +108,10 @@
                 </div>
                 <span class="badge bg-primary">Chart.js</span>
             </div>
-            <canvas id="riskChart" height="120"></canvas>
+
+            <div style="height: 280px;">
+                <canvas id="riskChart"></canvas>
+            </div>
         </div>
     </div>
 
@@ -112,7 +119,10 @@
         <div class="card sg-card p-4">
             <h5 class="fw-bold mb-0">Risk Distribution</h5>
             <small class="text-muted">Low, medium, and high risk summary</small>
-            <canvas id="riskPieChart" height="220" class="mt-3"></canvas>
+
+            <div style="height: 280px;">
+                <canvas id="riskPieChart" class="mt-3"></canvas>
+            </div>
         </div>
     </div>
 </div>
@@ -177,8 +187,8 @@
         <div class="card sg-card p-4">
             <h5 class="fw-bold">SupplyGuard Decision Support Summary</h5>
             <p class="text-muted mb-0">
-                Sistem ini dirancang untuk membantu perusahaan memantau risiko impor berdasarkan cuaca,
-                inflasi, kurs mata uang, berita global, dan ketersediaan pelabuhan. Nilai risiko akan dihitung
+                Sistem ini dirancang untuk membantu perusahaan memantau risiko impor berdasarkan data semua negara,
+                cuaca, inflasi, kurs mata uang, berita global, dan ketersediaan pelabuhan. Nilai risiko dihitung
                 menggunakan algoritma pembobotan SG-Risk Weighted Scoring Algorithm.
             </p>
         </div>
@@ -203,6 +213,7 @@
         },
         options: {
             responsive: true,
+            maintainAspectRatio: false,
             scales: {
                 y: {
                     beginAtZero: true,
@@ -225,7 +236,8 @@
             }]
         },
         options: {
-            responsive: true
+            responsive: true,
+            maintainAspectRatio: false
         }
     });
 

@@ -9,7 +9,7 @@ class DashboardController extends Controller
     public function index()
     {
         $summary = [
-            'countries' => 12,
+            'countries' => 250,
             'ports' => 28,
             'news' => 16,
             'average_risk' => 42,
