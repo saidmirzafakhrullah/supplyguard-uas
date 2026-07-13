@@ -1,425 +1,616 @@
 @extends('layouts.app')
 
-@section('title', 'Port Location - SupplyGuard')
-@section('page-title', 'Port Location Dashboard')
+@section('title', 'Lokasi Pelabuhan - SupplyGuard')
+@section('page-title', 'Lokasi Pelabuhan Global')
 
 @section('content')
 
-{{-- HEADER --}}
+<link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+/>
+
+<style>
+    #portMap {
+        width: 100%;
+        height: 520px;
+        border-radius: 16px;
+        z-index: 1;
+    }
+
+    .port-flag {
+        width: 38px;
+        height: 26px;
+        object-fit: cover;
+        border-radius: 5px;
+        border: 1px solid #dee2e6;
+    }
+
+    .map-legend {
+        background: #ffffff;
+        padding: 10px 12px;
+        border-radius: 10px;
+        box-shadow: 0 2px 12px rgba(0, 0, 0, 0.15);
+        font-size: 12px;
+        line-height: 1.8;
+    }
+
+    .legend-dot {
+        width: 11px;
+        height: 11px;
+        border-radius: 50%;
+        display: inline-block;
+        margin-right: 7px;
+    }
+
+    .table-port-name {
+        min-width: 190px;
+    }
+
+    .port-source {
+        font-size: 11px;
+    }
+</style>
+
+{{-- JUDUL HALAMAN --}}
 <div class="card sg-card p-4 mb-4">
-    <div class="d-flex justify-content-between align-items-center">
+    <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-3">
         <div>
-            <h4 class="fw-bold mb-1">Port Location Dashboard</h4>
+            <h4 class="fw-bold mb-1">Lokasi Pelabuhan Global</h4>
+
             <p class="text-muted mb-0">
-                Monitoring lokasi pelabuhan, status port, dan risiko jalur pengiriman untuk semua negara.
+                Pantau ketersediaan, lokasi, dan tingkat risiko pelabuhan
+                pada seluruh negara.
             </p>
         </div>
 
-        <span class="badge bg-success">Leaflet.js Map</span>
+        <span class="badge bg-primary px-3 py-2">
+            Peta OpenStreetMap & Leaflet
+        </span>
     </div>
 </div>
 
-{{-- SUMMARY --}}
-<div class="row g-4">
-    <div class="col-md-3">
-        <div class="card sg-card p-4">
-            <small class="text-muted">Total Countries</small>
-            <h3 class="fw-bold">{{ $summary['total_countries'] }}</h3>
-            <span class="badge bg-primary">All Countries</span>
-        </div>
-    </div>
+{{-- STATUS API --}}
+<div class="alert alert-info mb-4">
+    <div class="d-flex align-items-start gap-2">
+        <i class="bi bi-info-circle-fill mt-1"></i>
 
-    <div class="col-md-3">
-        <div class="card sg-card p-4">
-            <small class="text-muted">Available Ports</small>
-            <h3 class="fw-bold text-success">{{ $summary['available_ports'] }}</h3>
-            <span class="badge-soft risk-low">Available</span>
-        </div>
-    </div>
-
-    <div class="col-md-3">
-        <div class="card sg-card p-4">
-            <small class="text-muted">Limited Ports</small>
-            <h3 class="fw-bold text-warning">{{ $summary['limited_ports'] }}</h3>
-            <span class="badge-soft risk-medium">Limited</span>
-        </div>
-    </div>
-
-    <div class="col-md-3">
-        <div class="card sg-card p-4">
-            <small class="text-muted">No Seaport</small>
-            <h3 class="fw-bold text-danger">{{ $summary['no_seaport'] }}</h3>
-            <span class="badge-soft risk-high">Landlocked</span>
-        </div>
-    </div>
-</div>
-
-{{-- SELECTOR DAN HASIL --}}
-<div class="row g-4 mt-1">
-    <div class="col-lg-5">
-
-        <div class="card sg-card p-4">
-            <h5 class="fw-bold mb-3">Country Port Selector</h5>
-
-            <label class="form-label">Country</label>
-            <select id="countrySelect" class="form-select mb-3">
-                @foreach($countries as $index => $country)
-                    <option value="{{ $index }}">
-                        {{ $country['name'] }}
-                    </option>
-                @endforeach
-            </select>
-
-            <button onclick="showPortLocation()" class="btn btn-primary w-100">
-                Show Port Location
-            </button>
-
-            <div class="alert alert-info mt-3 mb-0">
-                Total negara tersedia:
-                <b>{{ count($countries) }}</b>
-            </div>
-        </div>
-
-        <div class="card sg-card p-4 mt-4">
-            <h5 class="fw-bold mb-3">Selected Country</h5>
-
-            <div class="d-flex align-items-center gap-3 mb-3">
-                <img
-                    id="countryFlag"
-                    src=""
-                    alt="Flag"
-                    style="width: 70px; border-radius: 8px; display: none;"
-                >
-
-                <div>
-                    <h5 id="countryName" class="fw-bold mb-0">-</h5>
-                    <small id="countryRegion" class="text-muted">-</small>
-                </div>
-            </div>
-
-            <table class="table align-middle mb-0">
-                <tbody>
-                    <tr>
-                        <td>Capital</td>
-                        <td id="countryCapital" class="fw-bold text-end">-</td>
-                    </tr>
-
-                    <tr>
-                        <td>Country Code</td>
-                        <td id="countryCode" class="fw-bold text-end">-</td>
-                    </tr>
-
-                    <tr>
-                        <td>Landlocked</td>
-                        <td id="landlockedStatus" class="fw-bold text-end">-</td>
-                    </tr>
-
-                    <tr>
-                        <td>Data Source</td>
-                        <td class="fw-bold text-end">World Port Dataset Simulation</td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
-
-    </div>
-
-    <div class="col-lg-7">
-
-        <div class="card sg-card p-4">
-            <h5 class="fw-bold mb-3">Port Location Result</h5>
-
-            <div class="row g-3">
-                <div class="col-md-6">
-                    <div class="border rounded p-3">
-                        <small class="text-muted">Port Name</small>
-                        <h5 id="portName" class="fw-bold mb-0">-</h5>
-                    </div>
-                </div>
-
-                <div class="col-md-6">
-                    <div class="border rounded p-3">
-                        <small class="text-muted">Port City</small>
-                        <h5 id="portCity" class="fw-bold mb-0">-</h5>
-                    </div>
-                </div>
-
-                <div class="col-md-4">
-                    <div class="border rounded p-3">
-                        <small class="text-muted">Port Count</small>
-                        <h5 id="portCount" class="fw-bold mb-0">-</h5>
-                    </div>
-                </div>
-
-                <div class="col-md-4">
-                    <div class="border rounded p-3">
-                        <small class="text-muted">Port Status</small>
-                        <h5 id="portStatus" class="fw-bold mb-0">-</h5>
-                    </div>
-                </div>
-
-                <div class="col-md-4">
-                    <div class="border rounded p-3">
-                        <small class="text-muted">Port Risk</small>
-                        <h5 id="portRisk" class="fw-bold mb-0">-</h5>
-                    </div>
-                </div>
-
-                <div class="col-md-6">
-                    <div class="border rounded p-3">
-                        <small class="text-muted">Latitude</small>
-                        <h5 id="portLatitude" class="fw-bold mb-0">-</h5>
-                    </div>
-                </div>
-
-                <div class="col-md-6">
-                    <div class="border rounded p-3">
-                        <small class="text-muted">Longitude</small>
-                        <h5 id="portLongitude" class="fw-bold mb-0">-</h5>
-                    </div>
-                </div>
-            </div>
-
-            <div class="mt-4">
-                <span id="riskCategory" class="badge-soft risk-low">-</span>
-            </div>
-
-            <div id="recommendationBox" class="alert alert-primary mt-4 mb-0">
-                Pilih negara untuk melihat lokasi port.
-            </div>
-        </div>
-
-    </div>
-</div>
-
-{{-- MAP --}}
-<div class="card sg-card p-4 mt-4">
-    <div class="d-flex justify-content-between align-items-center mb-3">
         <div>
-            <h5 class="fw-bold mb-0">Interactive Port Map</h5>
+            <strong>Status Data</strong>
+            <div>{{ $apiStatus }}</div>
+        </div>
+    </div>
+</div>
+
+{{-- RINGKASAN --}}
+<div class="row g-4 mb-4">
+    <div class="col-md-6 col-xl-3">
+        <div class="card sg-card p-4 h-100">
+            <small class="text-muted">Total Negara</small>
+            <h3 class="fw-bold mb-2">
+                {{ $summary['total_countries'] }}
+            </h3>
+            <span class="badge bg-primary">Negara Terpantau</span>
+        </div>
+    </div>
+
+    <div class="col-md-6 col-xl-3">
+        <div class="card sg-card p-4 h-100">
+            <small class="text-muted">Pelabuhan Tersedia</small>
+            <h3 class="fw-bold text-success mb-2">
+                {{ $summary['available_ports'] }}
+            </h3>
+            <span class="badge bg-success">Tersedia</span>
+        </div>
+    </div>
+
+    <div class="col-md-6 col-xl-3">
+        <div class="card sg-card p-4 h-100">
+            <small class="text-muted">Pelabuhan Terbatas</small>
+            <h3 class="fw-bold text-warning mb-2">
+                {{ $summary['limited_ports'] }}
+            </h3>
+            <span class="badge bg-warning text-dark">Terbatas</span>
+        </div>
+    </div>
+
+    <div class="col-md-6 col-xl-3">
+        <div class="card sg-card p-4 h-100">
+            <small class="text-muted">Tanpa Pelabuhan Laut</small>
+            <h3 class="fw-bold text-danger mb-2">
+                {{ $summary['no_seaport'] }}
+            </h3>
+            <span class="badge bg-danger">Tanpa Akses Laut</span>
+        </div>
+    </div>
+</div>
+
+{{-- PETA --}}
+<div class="card sg-card p-4 mb-4">
+    <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-3 mb-3">
+        <div>
+            <h5 class="fw-bold mb-1">Peta Pelabuhan Dunia</h5>
+
             <small class="text-muted">
-                Peta lokasi port menggunakan Leaflet.js dan OpenStreetMap.
+                Klik penanda pada peta untuk melihat informasi pelabuhan.
             </small>
         </div>
 
-        <span class="badge bg-success">OpenStreetMap</span>
+        <div class="d-flex gap-2">
+            <select
+                id="mapStatusFilter"
+                class="form-select"
+                style="min-width: 210px;"
+            >
+                <option value="">Semua Status</option>
+                <option value="Available">Tersedia</option>
+                <option value="Limited">Terbatas</option>
+                <option value="No Seaport">Tanpa Pelabuhan Laut</option>
+            </select>
+
+            <button
+                type="button"
+                id="resetMapButton"
+                class="btn btn-outline-primary"
+            >
+                <i class="bi bi-arrow-clockwise me-1"></i>
+                Atur Ulang
+            </button>
+        </div>
     </div>
 
-    <div id="portMap" style="height: 420px; border-radius: 16px;"></div>
+    <div id="portMap"></div>
 </div>
 
-{{-- RULES --}}
-<div class="card sg-card p-4 mt-4">
-    <h5 class="fw-bold mb-3">Port Risk Rules</h5>
+{{-- TABEL --}}
+<div class="card sg-card p-4">
+    <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-3 mb-3">
+        <div>
+            <h5 class="fw-bold mb-1">Data Lokasi Pelabuhan</h5>
 
-    <div class="table-responsive">
-        <table class="table align-middle">
-            <thead>
-                <tr>
-                    <th>Condition</th>
-                    <th>Risk Impact</th>
-                    <th>Business Effect</th>
-                </tr>
-            </thead>
+            <small class="text-muted">
+                Daftar pelabuhan, status, jumlah, koordinat, dan tingkat risiko.
+            </small>
+        </div>
 
-            <tbody>
-                <tr>
-                    <td>Pelabuhan tersedia dan aktif</td>
-                    <td>
-                        <span class="badge-soft risk-low">Low Risk</span>
-                    </td>
-                    <td>Aktivitas impor dapat berjalan normal.</td>
-                </tr>
-
-                <tr>
-                    <td>Jumlah pelabuhan terbatas</td>
-                    <td>
-                        <span class="badge-soft risk-medium">Medium Risk</span>
-                    </td>
-                    <td>Perlu memantau kapasitas pelabuhan.</td>
-                </tr>
-
-                <tr>
-                    <td>Negara tidak memiliki akses laut langsung</td>
-                    <td>
-                        <span class="badge-soft risk-high">High Risk</span>
-                    </td>
-                    <td>Perlu memakai pelabuhan negara tetangga.</td>
-                </tr>
-
-                <tr>
-                    <td>Port congestion atau keterlambatan tinggi</td>
-                    <td>
-                        <span class="badge bg-dark text-white">Critical Risk</span>
-                    </td>
-                    <td>Pengiriman sebaiknya ditunda atau dialihkan.</td>
-                </tr>
-            </tbody>
-        </table>
+        <div style="width: 100%; max-width: 330px;">
+            <input
+                type="text"
+                id="portSearch"
+                class="form-control"
+                placeholder="Cari negara, kota, atau pelabuhan..."
+            >
+        </div>
     </div>
-</div>
-
-{{-- PREVIEW --}}
-<div class="card sg-card p-4 mt-4">
-    <h5 class="fw-bold mb-3">All Countries Port Preview</h5>
 
     <div class="table-responsive">
         <table class="table align-middle">
             <thead>
                 <tr>
                     <th>No</th>
-                    <th>Country</th>
-                    <th>Code</th>
-                    <th>Region</th>
-                    <th>Port Name</th>
-                    <th>Port City</th>
-                    <th>Port Count</th>
+                    <th>Negara</th>
+                    <th>Kode</th>
+                    <th>Wilayah</th>
+                    <th>Nama Pelabuhan</th>
+                    <th>Kota</th>
                     <th>Status</th>
-                    <th>Risk</th>
-                    <th>Category</th>
-                    <th>Recommendation</th>
+                    <th>Jumlah</th>
+                    <th>Risiko</th>
+                    <th>Sumber Data</th>
                 </tr>
             </thead>
 
             <tbody>
-                @foreach(array_slice($countries, 0, 25) as $index => $country)
-                    <tr>
+                @forelse($countries as $index => $country)
+                    <tr
+                        class="port-row"
+                        data-status="{{ $country['port_status'] }}"
+                        data-search="{{ strtolower(
+                            $country['name']
+                            . ' '
+                            . $country['code']
+                            . ' '
+                            . $country['region']
+                            . ' '
+                            . $country['port_name']
+                            . ' '
+                            . $country['port_city']
+                        ) }}"
+                    >
                         <td>{{ $index + 1 }}</td>
-                        <td>{{ $country['name'] }}</td>
-                        <td>{{ $country['code'] }}</td>
-                        <td>{{ $country['region'] }}</td>
-                        <td>{{ $country['port_name'] }}</td>
-                        <td>{{ $country['port_city'] }}</td>
-                        <td>{{ $country['port_count'] }}</td>
-                        <td>{{ $country['port_status'] }}</td>
-                        <td class="fw-bold">{{ $country['port_risk'] }}</td>
+
                         <td>
-                            <span class="badge-soft {{ $country['badge'] }}">
-                                {{ $country['category'] }}
+                            <div class="d-flex align-items-center gap-2">
+                                @if(!empty($country['flag']))
+                                    <img
+                                        src="{{ $country['flag'] }}"
+                                        alt="{{ $country['name'] }}"
+                                        class="port-flag"
+                                    >
+                                @else
+                                    <div
+                                        class="port-flag bg-light d-flex align-items-center justify-content-center"
+                                    >
+                                        <i class="bi bi-flag text-muted"></i>
+                                    </div>
+                                @endif
+
+                                <div>
+                                    <div class="fw-bold">
+                                        {{ $country['name'] }}
+                                    </div>
+
+                                    <small class="text-muted">
+                                        {{ $country['official_name'] }}
+                                    </small>
+                                </div>
+                            </div>
+                        </td>
+
+                        <td>
+                            <span class="badge bg-light text-dark border">
+                                {{ $country['code'] }}
                             </span>
                         </td>
-                        <td>{{ $country['recommendation'] }}</td>
+
+                        <td>{{ $country['region'] }}</td>
+
+                        <td class="table-port-name">
+                            <div class="fw-semibold">
+                                {{ $country['port_name'] }}
+                            </div>
+
+                            <small class="text-muted">
+                                {{ number_format($country['port_latitude'], 4) }},
+                                {{ number_format($country['port_longitude'], 4) }}
+                            </small>
+                        </td>
+
+                        <td>{{ $country['port_city'] }}</td>
+
+                        <td>
+                            @if($country['port_status'] === 'Available')
+                                <span class="badge bg-success">
+                                    Tersedia
+                                </span>
+                            @elseif($country['port_status'] === 'Limited')
+                                <span class="badge bg-warning text-dark">
+                                    Terbatas
+                                </span>
+                            @else
+                                <span class="badge bg-danger">
+                                    Tanpa Pelabuhan Laut
+                                </span>
+                            @endif
+                        </td>
+
+                        <td>
+                            <span class="fw-bold">
+                                {{ $country['port_count'] }}
+                            </span>
+                        </td>
+
+                        <td>
+                            <div class="mb-1">
+                                @if($country['category'] === 'Low')
+                                    <span class="badge bg-success">
+                                        Rendah
+                                    </span>
+                                @elseif($country['category'] === 'Medium')
+                                    <span class="badge bg-warning text-dark">
+                                        Sedang
+                                    </span>
+                                @elseif($country['category'] === 'High')
+                                    <span class="badge bg-danger">
+                                        Tinggi
+                                    </span>
+                                @else
+                                    <span class="badge bg-dark">
+                                        Kritis
+                                    </span>
+                                @endif
+                            </div>
+
+                            <small class="text-muted">
+                                Skor: {{ $country['port_risk'] }}
+                            </small>
+                        </td>
+
+                        <td>
+                            <small class="text-muted port-source">
+                                {{ $country['port_data_source'] }}
+                            </small>
+                        </td>
                     </tr>
-                @endforeach
+                @empty
+                    <tr>
+                        <td colspan="10" class="text-center py-5">
+                            <i class="bi bi-inbox fs-1 text-muted"></i>
+
+                            <div class="mt-2 text-muted">
+                                Data pelabuhan belum tersedia.
+                            </div>
+                        </td>
+                    </tr>
+                @endforelse
             </tbody>
         </table>
     </div>
 
-    <small class="text-muted">
-        Tabel ini menampilkan 25 negara pertama sebagai preview.
-        Semua negara tetap tersedia di dropdown.
-    </small>
-</div>
-
-{{-- EXPLANATION --}}
-<div class="card sg-card p-4 mt-4">
-    <h5 class="fw-bold mb-3">Port Location Explanation</h5>
-
-    <p class="text-muted mb-2">
-        Fitur ini digunakan untuk membantu perusahaan melihat ketersediaan pelabuhan
-        pada negara tujuan impor. Negara yang tidak memiliki akses laut langsung
-        akan memiliki risiko lebih tinggi karena harus memakai pelabuhan negara tetangga.
-    </p>
-
-    <div class="alert alert-info mb-0">
-        Port Risk dipengaruhi oleh status negara landlocked, jumlah pelabuhan,
-        kapasitas port, dan ketersediaan jalur pengiriman.
+    <div class="alert alert-light border mt-3 mb-0">
+        <strong>Keterangan:</strong>
+        negara tanpa akses laut diberi status
+        <b>Tanpa Pelabuhan Laut</b> dan disarankan menggunakan
+        pelabuhan negara tetangga.
     </div>
 </div>
 
 @endsection
 
 @push('scripts')
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
 <script>
-    const countries = @json($countries);
+    const portCountries = @json($countries);
 
-    let portMap = null;
-    let portMarker = null;
+    const portMap = L.map('portMap', {
+        worldCopyJump: true
+    }).setView([15, 15], 2);
 
-    function showPortLocation() {
-        const selectedIndex = document.getElementById('countrySelect').value;
-        const country = countries[selectedIndex];
+    L.tileLayer(
+        'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+        {
+            maxZoom: 18,
+            attribution:
+                '&copy; OpenStreetMap contributors'
+        }
+    ).addTo(portMap);
 
-        updateCountryInfo(country);
-        updatePortInfo(country);
-        updateMap(country);
+    const markerLayer = L.layerGroup().addTo(portMap);
+
+    function statusLabel(status) {
+        if (status === 'Available') {
+            return 'Tersedia';
+        }
+
+        if (status === 'Limited') {
+            return 'Terbatas';
+        }
+
+        return 'Tanpa Pelabuhan Laut';
     }
 
-    function updateCountryInfo(country) {
-        document.getElementById('countryName').innerText = country.name ?? '-';
+    function riskLabel(category) {
+        if (category === 'Low') {
+            return 'Rendah';
+        }
 
-        document.getElementById('countryRegion').innerText =
-            (country.region ?? '-') + ' / ' + (country.subregion ?? '-');
+        if (category === 'Medium') {
+            return 'Sedang';
+        }
 
-        document.getElementById('countryCapital').innerText = country.capital ?? '-';
-        document.getElementById('countryCode').innerText = country.code ?? '-';
-        document.getElementById('landlockedStatus').innerText = country.landlocked ? 'Yes' : 'No';
+        if (category === 'High') {
+            return 'Tinggi';
+        }
 
-        const flag = document.getElementById('countryFlag');
+        return 'Kritis';
+    }
 
-        if (country.flag) {
-            flag.src = country.flag;
-            flag.style.display = 'block';
-        } else {
-            flag.style.display = 'none';
+    function markerColor(status) {
+        if (status === 'Available') {
+            return '#198754';
+        }
+
+        if (status === 'Limited') {
+            return '#ffc107';
+        }
+
+        return '#dc3545';
+    }
+
+    function renderMarkers(status = '') {
+        markerLayer.clearLayers();
+
+        const bounds = [];
+
+        portCountries.forEach(function (country) {
+            if (
+                status !== ''
+                && country.port_status !== status
+            ) {
+                return;
+            }
+
+            const latitude =
+                Number(country.port_latitude);
+
+            const longitude =
+                Number(country.port_longitude);
+
+            if (
+                !Number.isFinite(latitude)
+                || !Number.isFinite(longitude)
+                || Math.abs(latitude) > 90
+                || Math.abs(longitude) > 180
+            ) {
+                return;
+            }
+
+            const marker = L.circleMarker(
+                [latitude, longitude],
+                {
+                    radius: 7,
+                    color: markerColor(
+                        country.port_status
+                    ),
+                    fillColor: markerColor(
+                        country.port_status
+                    ),
+                    fillOpacity: 0.85,
+                    weight: 2
+                }
+            );
+
+            const flagHtml = country.flag
+                ? `
+                    <img
+                        src="${country.flag}"
+                        alt="${country.name}"
+                        style="
+                            width:32px;
+                            height:22px;
+                            object-fit:cover;
+                            border-radius:4px;
+                            margin-right:7px;
+                        "
+                    >
+                `
+                : '';
+
+            marker.bindPopup(`
+                <div style="min-width:230px;">
+                    <div
+                        style="
+                            display:flex;
+                            align-items:center;
+                            margin-bottom:8px;
+                        "
+                    >
+                        ${flagHtml}
+
+                        <strong>
+                            ${country.name}
+                        </strong>
+                    </div>
+
+                    <div>
+                        <b>Pelabuhan:</b>
+                        ${country.port_name}
+                    </div>
+
+                    <div>
+                        <b>Kota:</b>
+                        ${country.port_city}
+                    </div>
+
+                    <div>
+                        <b>Status:</b>
+                        ${statusLabel(country.port_status)}
+                    </div>
+
+                    <div>
+                        <b>Jumlah pelabuhan:</b>
+                        ${country.port_count}
+                    </div>
+
+                    <div>
+                        <b>Risiko:</b>
+                        ${riskLabel(country.category)}
+                        (${country.port_risk})
+                    </div>
+
+                    <hr style="margin:8px 0;">
+
+                    <small>
+                        ${country.recommendation}
+                    </small>
+                </div>
+            `);
+
+            marker.addTo(markerLayer);
+
+            bounds.push([latitude, longitude]);
+        });
+
+        if (bounds.length > 0) {
+            portMap.fitBounds(bounds, {
+                padding: [35, 35],
+                maxZoom: 4
+            });
         }
     }
 
-    function updatePortInfo(country) {
-        document.getElementById('portName').innerText = country.port_name ?? '-';
-        document.getElementById('portCity').innerText = country.port_city ?? '-';
-        document.getElementById('portCount').innerText = country.port_count ?? '-';
-        document.getElementById('portStatus').innerText = country.port_status ?? '-';
-        document.getElementById('portRisk').innerText = country.port_risk ?? '-';
-        document.getElementById('portLatitude').innerText = country.port_latitude ?? '-';
-        document.getElementById('portLongitude').innerText = country.port_longitude ?? '-';
-
-        const riskCategory = document.getElementById('riskCategory');
-        riskCategory.className = 'badge-soft ' + country.badge;
-        riskCategory.innerText = country.category + ' Risk';
-
-        const recommendationBox = document.getElementById('recommendationBox');
-        recommendationBox.innerText = country.recommendation;
-        recommendationBox.className = 'alert alert-primary mt-4 mb-0';
-    }
-
-    function updateMap(country) {
-        const latitude = parseFloat(country.port_latitude) || 0;
-        const longitude = parseFloat(country.port_longitude) || 0;
-
-        if (!portMap) {
-            portMap = L.map('portMap').setView([latitude, longitude], 4);
-
-            L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                maxZoom: 8,
-                attribution: '&copy; OpenStreetMap'
-            }).addTo(portMap);
-        } else {
-            portMap.setView([latitude, longitude], 4);
-        }
-
-        if (portMarker) {
-            portMap.removeLayer(portMarker);
-        }
-
-        portMarker = L.marker([latitude, longitude])
-            .addTo(portMap)
-            .bindPopup(`
-                <b>${country.port_name}</b><br>
-                Country: ${country.name}<br>
-                City: ${country.port_city}<br>
-                Status: ${country.port_status}<br>
-                Risk: ${country.category}
-            `)
-            .openPopup();
-
-        setTimeout(function () {
-            portMap.invalidateSize();
-        }, 200);
-    }
-
-    document.addEventListener('DOMContentLoaded', function () {
-        showPortLocation();
+    const legend = L.control({
+        position: 'bottomright'
     });
+
+    legend.onAdd = function () {
+        const div = L.DomUtil.create(
+            'div',
+            'map-legend'
+        );
+
+        div.innerHTML = `
+            <strong>Status Pelabuhan</strong><br>
+
+            <span
+                class="legend-dot"
+                style="background:#198754;"
+            ></span>
+            Tersedia<br>
+
+            <span
+                class="legend-dot"
+                style="background:#ffc107;"
+            ></span>
+            Terbatas<br>
+
+            <span
+                class="legend-dot"
+                style="background:#dc3545;"
+            ></span>
+            Tanpa Pelabuhan Laut
+        `;
+
+        return div;
+    };
+
+    legend.addTo(portMap);
+
+    renderMarkers();
+
+    document
+        .getElementById('mapStatusFilter')
+        .addEventListener('change', function () {
+            renderMarkers(this.value);
+        });
+
+    document
+        .getElementById('resetMapButton')
+        .addEventListener('click', function () {
+            document.getElementById(
+                'mapStatusFilter'
+            ).value = '';
+
+            renderMarkers('');
+        });
+
+    document
+        .getElementById('portSearch')
+        .addEventListener('keyup', function () {
+            const keyword =
+                this.value.toLowerCase();
+
+            const rows =
+                document.querySelectorAll(
+                    '.port-row'
+                );
+
+            rows.forEach(function (row) {
+                const searchText =
+                    row.getAttribute(
+                        'data-search'
+                    );
+
+                row.style.display =
+                    searchText.includes(keyword)
+                        ? ''
+                        : 'none';
+            });
+        });
+
+    setTimeout(function () {
+        portMap.invalidateSize();
+    }, 300);
 </script>
 @endpush

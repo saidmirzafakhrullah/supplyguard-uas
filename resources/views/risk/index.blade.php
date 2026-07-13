@@ -1,20 +1,20 @@
 @extends('layouts.app')
 
-@section('title', 'Risk Scoring - SupplyGuard')
-@section('page-title', 'Risk Scoring Engine')
+@section('title', 'Penilaian Risiko - SupplyGuard')
+@section('page-title', 'Mesin Penilaian Risiko')
 
 @section('content')
 <div class="card sg-card p-4 mb-4">
     <div class="d-flex justify-content-between align-items-center">
         <div>
-            <h4 class="fw-bold mb-1">SG-Risk Weighted Scoring Algorithm</h4>
+            <h4 class="fw-bold mb-1">Algoritma Penilaian Berbobot SG-Risk</h4>
             <p class="text-muted mb-0">
-                Risk scoring untuk semua negara berdasarkan cuaca, inflasi, kurs mata uang,
+                Penilaian risiko untuk semua negara berdasarkan cuaca, inflasi, kurs mata uang,
                 sentimen berita, dan ketersediaan pelabuhan.
             </p>
         </div>
 
-        <span class="badge bg-danger">All Countries Risk Engine</span>
+        <span class="badge bg-danger">Mesin Risiko Seluruh Negara</span>
     </div>
 </div>
 
@@ -22,11 +22,13 @@
     <div class="col-lg-4">
         <div class="card sg-card p-4">
             <h5 class="fw-bold">Pilih Negara</h5>
+
             <p class="text-muted">
-                Pilih negara dari dataset global untuk melihat hasil risk score.
+                Pilih negara dari dataset global untuk melihat hasil skor risiko.
             </p>
 
-            <label class="form-label">Country</label>
+            <label class="form-label">Negara</label>
+
             <select id="countrySelect" class="form-select mb-3">
                 @foreach($countries as $index => $country)
                     <option value="{{ $index }}">
@@ -36,7 +38,7 @@
             </select>
 
             <button onclick="showCountryRisk()" class="btn btn-primary w-100">
-                Hitung Risk Score
+                Hitung Skor Risiko
             </button>
 
             <div class="alert alert-info mt-3 mb-0">
@@ -46,35 +48,39 @@
         </div>
 
         <div class="card sg-card p-4 mt-4">
-            <h5 class="fw-bold mb-3">Formula Risk Score</h5>
+            <h5 class="fw-bold mb-3">Rumus Skor Risiko</h5>
 
             <table class="table align-middle">
                 <tbody>
                     <tr>
-                        <td>Weather Risk</td>
+                        <td>Risiko Cuaca</td>
                         <td class="fw-bold text-end">30%</td>
                     </tr>
+
                     <tr>
-                        <td>Inflation Risk</td>
+                        <td>Risiko Inflasi</td>
                         <td class="fw-bold text-end">20%</td>
                     </tr>
+
                     <tr>
-                        <td>Currency Risk</td>
+                        <td>Risiko Mata Uang</td>
                         <td class="fw-bold text-end">15%</td>
                     </tr>
+
                     <tr>
-                        <td>News Sentiment Risk</td>
+                        <td>Risiko Sentimen Berita</td>
                         <td class="fw-bold text-end">25%</td>
                     </tr>
+
                     <tr>
-                        <td>Port Availability Risk</td>
+                        <td>Risiko Ketersediaan Pelabuhan</td>
                         <td class="fw-bold text-end">10%</td>
                     </tr>
                 </tbody>
             </table>
 
             <div class="alert alert-primary mb-0">
-                Total Risk = semua indikator dikalikan bobot masing-masing.
+                Total Risiko = semua indikator dikalikan dengan bobot masing-masing.
             </div>
         </div>
     </div>
@@ -83,80 +89,88 @@
         <div class="card sg-card p-4">
             <div class="d-flex justify-content-between align-items-start mb-3">
                 <div>
-                    <h5 class="fw-bold mb-1">Country Risk Profile</h5>
-                    <small class="text-muted">Hasil perhitungan risiko berdasarkan negara yang dipilih.</small>
+                    <h5 class="fw-bold mb-1">Profil Risiko Negara</h5>
+
+                    <small class="text-muted">
+                        Hasil perhitungan risiko berdasarkan negara yang dipilih.
+                    </small>
                 </div>
 
-                <img id="countryFlag" src="" alt="Flag" style="width: 70px; border-radius: 8px; display: none;">
+                <img
+                    id="countryFlag"
+                    src=""
+                    alt="Bendera"
+                    style="width: 70px; border-radius: 8px; display: none;"
+                >
             </div>
 
             <div class="row g-3">
                 <div class="col-md-6">
                     <div class="border rounded p-3">
-                        <small class="text-muted">Country</small>
+                        <small class="text-muted">Negara</small>
                         <h5 id="countryName" class="mb-0">-</h5>
                     </div>
                 </div>
 
                 <div class="col-md-6">
                     <div class="border rounded p-3">
-                        <small class="text-muted">Region</small>
+                        <small class="text-muted">Wilayah</small>
                         <h5 id="region" class="mb-0">-</h5>
                     </div>
                 </div>
 
                 <div class="col-md-6">
                     <div class="border rounded p-3">
-                        <small class="text-muted">Currency</small>
+                        <small class="text-muted">Mata Uang</small>
                         <h5 id="currency" class="mb-0">-</h5>
                     </div>
                 </div>
 
                 <div class="col-md-6">
                     <div class="border rounded p-3">
-                        <small class="text-muted">Capital</small>
+                        <small class="text-muted">Ibu Kota</small>
                         <h5 id="capital" class="mb-0">-</h5>
                     </div>
                 </div>
 
                 <div class="col-md-4">
                     <div class="border rounded p-3">
-                        <small class="text-muted">Weather Risk</small>
+                        <small class="text-muted">Risiko Cuaca</small>
                         <h5 id="weatherRisk" class="mb-0">-</h5>
                     </div>
                 </div>
 
                 <div class="col-md-4">
                     <div class="border rounded p-3">
-                        <small class="text-muted">Inflation Risk</small>
+                        <small class="text-muted">Risiko Inflasi</small>
                         <h5 id="inflationRisk" class="mb-0">-</h5>
                     </div>
                 </div>
 
                 <div class="col-md-4">
                     <div class="border rounded p-3">
-                        <small class="text-muted">Currency Risk</small>
+                        <small class="text-muted">Risiko Mata Uang</small>
                         <h5 id="currencyRisk" class="mb-0">-</h5>
                     </div>
                 </div>
 
                 <div class="col-md-4">
                     <div class="border rounded p-3">
-                        <small class="text-muted">News Risk</small>
+                        <small class="text-muted">Risiko Berita</small>
                         <h5 id="newsRisk" class="mb-0">-</h5>
                     </div>
                 </div>
 
                 <div class="col-md-4">
                     <div class="border rounded p-3">
-                        <small class="text-muted">Port Risk</small>
+                        <small class="text-muted">Risiko Pelabuhan</small>
                         <h5 id="portRisk" class="mb-0">-</h5>
                     </div>
                 </div>
 
                 <div class="col-md-4">
                     <div class="border rounded p-3">
-                        <small class="text-muted">Total Risk</small>
+                        <small class="text-muted">Total Risiko</small>
                         <h5 id="totalRisk" class="mb-0 fw-bold">-</h5>
                     </div>
                 </div>
@@ -172,20 +186,20 @@
         </div>
 
         <div class="card sg-card p-4 mt-4">
-            <h5 class="fw-bold mb-3">Selected Country Risk Component</h5>
+            <h5 class="fw-bold mb-3">Komponen Risiko Negara Terpilih</h5>
             <canvas id="componentChart" height="120"></canvas>
         </div>
     </div>
 </div>
 
 <div class="card sg-card p-4 mt-4">
-    <h5 class="fw-bold mb-3">Risk Category</h5>
+    <h5 class="fw-bold mb-3">Kategori Risiko</h5>
 
     <div class="row g-3">
         <div class="col-md-3">
             <div class="p-3 rounded risk-low">
                 <b>0 - 25</b><br>
-                Low Risk<br>
+                Risiko Rendah<br>
                 <small>Aman untuk aktivitas impor.</small>
             </div>
         </div>
@@ -193,7 +207,7 @@
         <div class="col-md-3">
             <div class="p-3 rounded risk-medium">
                 <b>26 - 50</b><br>
-                Medium Risk<br>
+                Risiko Sedang<br>
                 <small>Masih aman, tetapi perlu dipantau.</small>
             </div>
         </div>
@@ -201,7 +215,7 @@
         <div class="col-md-3">
             <div class="p-3 rounded risk-high">
                 <b>51 - 75</b><br>
-                High Risk<br>
+                Risiko Tinggi<br>
                 <small>Perlu menyiapkan negara alternatif.</small>
             </div>
         </div>
@@ -209,7 +223,7 @@
         <div class="col-md-3">
             <div class="p-3 rounded bg-dark text-white">
                 <b>76 - 100</b><br>
-                Critical Risk<br>
+                Risiko Kritis<br>
                 <small>Pengiriman sebaiknya ditunda.</small>
             </div>
         </div>
@@ -217,21 +231,21 @@
 </div>
 
 <div class="card sg-card p-4 mt-4">
-    <h5 class="fw-bold mb-3">All Countries Risk Preview</h5>
+    <h5 class="fw-bold mb-3">Pratinjau Risiko Seluruh Negara</h5>
 
     <div class="table-responsive">
         <table class="table align-middle">
             <thead>
                 <tr>
                     <th>No</th>
-                    <th>Country</th>
-                    <th>Code</th>
-                    <th>Region</th>
-                    <th>Weather</th>
-                    <th>Inflation</th>
-                    <th>Currency</th>
-                    <th>News</th>
-                    <th>Port</th>
+                    <th>Negara</th>
+                    <th>Kode</th>
+                    <th>Wilayah</th>
+                    <th>Cuaca</th>
+                    <th>Inflasi</th>
+                    <th>Mata Uang</th>
+                    <th>Berita</th>
+                    <th>Pelabuhan</th>
                     <th>Total</th>
                     <th>Status</th>
                 </tr>
@@ -250,9 +264,17 @@
                         <td>{{ $country['news_risk'] }}</td>
                         <td>{{ $country['port_risk'] }}</td>
                         <td class="fw-bold">{{ $country['total_risk'] }}</td>
+
                         <td>
                             <span class="badge-soft {{ $country['badge'] }}">
-                                {{ $country['category'] }}
+                                {{
+                                    [
+                                        'Low' => 'Rendah',
+                                        'Medium' => 'Sedang',
+                                        'High' => 'Tinggi',
+                                        'Critical' => 'Kritis'
+                                    ][$country['category']] ?? $country['category']
+                                }}
                             </span>
                         </td>
                     </tr>
@@ -262,24 +284,26 @@
     </div>
 
     <small class="text-muted">
-        Tabel ini menampilkan 25 negara pertama sebagai preview. Semua negara tetap tersedia di dropdown.
+        Tabel ini menampilkan 25 negara pertama sebagai pratinjau.
+        Semua negara tetap tersedia di daftar pilihan negara.
     </small>
 </div>
 
 <div class="card sg-card p-4 mt-4">
-    <h5 class="fw-bold mb-3">Calculation Explanation</h5>
+    <h5 class="fw-bold mb-3">Penjelasan Perhitungan</h5>
 
     <p class="text-muted mb-2">
-        Sistem menggunakan metode weighted scoring. Setiap indikator memiliki bobot berbeda:
+        Sistem menggunakan metode penilaian berbobot.
+        Setiap indikator memiliki bobot yang berbeda:
     </p>
 
     <div class="alert alert-info mb-0">
-        Total Risk Score =
-        (Weather Risk × 30%) +
-        (Inflation Risk × 20%) +
-        (Currency Risk × 15%) +
-        (News Sentiment Risk × 25%) +
-        (Port Availability Risk × 10%).
+        Total Skor Risiko =
+        (Risiko Cuaca × 30%) +
+        (Risiko Inflasi × 20%) +
+        (Risiko Mata Uang × 15%) +
+        (Risiko Sentimen Berita × 25%) +
+        (Risiko Ketersediaan Pelabuhan × 10%).
     </div>
 </div>
 @endsection
@@ -305,11 +329,20 @@
         document.getElementById('portRisk').innerText = country.port_risk ?? '-';
         document.getElementById('totalRisk').innerText = country.total_risk ?? '-';
 
+        const categoryTranslations = {
+            Low: 'Rendah',
+            Medium: 'Sedang',
+            High: 'Tinggi',
+            Critical: 'Kritis'
+        };
+
         const category = document.getElementById('riskCategory');
         category.className = 'badge-soft ' + country.badge;
-        category.innerText = country.category + ' Risk';
+        category.innerText =
+            'Risiko ' + (categoryTranslations[country.category] ?? country.category);
 
-        document.getElementById('recommendationBox').innerText = country.recommendation;
+        document.getElementById('recommendationBox').innerText =
+            country.recommendation;
 
         const flag = document.getElementById('countryFlag');
 
@@ -332,26 +365,35 @@
             componentChart.destroy();
         }
 
-        componentChart = new Chart(document.getElementById('componentChart'), {
-            type: 'bar',
-            data: {
-                labels: ['Weather', 'Inflation', 'Currency', 'News', 'Port'],
-                datasets: [{
-                    label: 'Risk Component',
-                    data: chartData,
-                    borderWidth: 1
-                }]
-            },
-            options: {
-                responsive: true,
-                scales: {
-                    y: {
-                        beginAtZero: true,
-                        max: 100
+        componentChart = new Chart(
+            document.getElementById('componentChart'),
+            {
+                type: 'bar',
+                data: {
+                    labels: [
+                        'Cuaca',
+                        'Inflasi',
+                        'Mata Uang',
+                        'Berita',
+                        'Pelabuhan'
+                    ],
+                    datasets: [{
+                        label: 'Komponen Risiko',
+                        data: chartData,
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            max: 100
+                        }
                     }
                 }
             }
-        });
+        );
     }
 
     document.addEventListener('DOMContentLoaded', function () {

@@ -1,270 +1,437 @@
 @extends('layouts.app')
 
-@section('title', 'Manage Ports - SupplyGuard')
-@section('page-title', 'Admin Management - Manage Ports')
+@section('title', 'Kelola Pelabuhan - SupplyGuard')
+@section('page-title', 'Manajemen Admin - Pelabuhan')
 
 @section('content')
 
-{{-- HEADER --}}
+@if(session('success'))
+    <div class="alert alert-success alert-dismissible fade show">
+        <i class="bi bi-check-circle-fill me-2"></i>
+        {{ session('success') }}
+
+        <button
+            type="button"
+            class="btn-close"
+            data-bs-dismiss="alert"
+        ></button>
+    </div>
+@endif
+
+@if($errors->any())
+    <div class="alert alert-danger alert-dismissible fade show">
+        <i class="bi bi-exclamation-triangle-fill me-2"></i>
+        {{ $errors->first() }}
+
+        <button
+            type="button"
+            class="btn-close"
+            data-bs-dismiss="alert"
+        ></button>
+    </div>
+@endif
+
 <div class="card sg-card p-4 mb-4">
-    <div class="d-flex justify-content-between align-items-center">
+    <div
+        class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-3"
+    >
         <div>
-            <h4 class="fw-bold mb-1">Manage Ports</h4>
+            <h4 class="fw-bold mb-1">
+                Kelola Dataset Pelabuhan
+            </h4>
+
             <p class="text-muted mb-0">
-                Halaman admin untuk memantau dataset pelabuhan dunia yang digunakan
-                pada sistem risiko rantai pasok.
+                Tambah, ubah, cari, dan hapus data pelabuhan
+                yang digunakan dalam pemantauan rantai pasok.
             </p>
         </div>
 
-        <span class="badge bg-primary">Port Dataset</span>
+        <button
+            type="button"
+            class="btn btn-primary"
+            data-bs-toggle="modal"
+            data-bs-target="#addPortModal"
+        >
+            <i class="bi bi-plus-lg me-1"></i>
+            Tambah Pelabuhan
+        </button>
     </div>
 </div>
 
-{{-- SUMMARY --}}
-<div class="row g-4">
-    <div class="col-md-3">
-        <div class="card sg-card p-4">
-            <small class="text-muted">Total Countries</small>
-            <h3 class="fw-bold">{{ $summary['total_countries'] }}</h3>
-            <span class="badge bg-primary">All Countries</span>
+<div class="row g-4 mb-4">
+    <div class="col-sm-6 col-xl-3">
+        <div class="card sg-card p-4 h-100">
+            <small class="text-muted">Total Pelabuhan</small>
+            <h3 class="fw-bold mb-1">
+                {{ $summary['total_ports'] }}
+            </h3>
+            <span class="text-primary small">
+                Dataset tersimpan
+            </span>
         </div>
     </div>
 
-    <div class="col-md-3">
-        <div class="card sg-card p-4">
-            <small class="text-muted">Total Ports Data</small>
-            <h3 class="fw-bold">{{ $summary['total_ports'] }}</h3>
-            <span class="badge bg-success">Dataset</span>
+    <div class="col-sm-6 col-xl-3">
+        <div class="card sg-card p-4 h-100">
+            <small class="text-muted">Pelabuhan Aktif</small>
+            <h3 class="fw-bold text-success mb-1">
+                {{ $summary['active_ports'] }}
+            </h3>
+            <span class="text-success small">
+                Beroperasi normal
+            </span>
         </div>
     </div>
 
-    <div class="col-md-2">
-        <div class="card sg-card p-4">
-            <small class="text-muted">Active Ports</small>
-            <h3 class="fw-bold text-success">{{ $summary['active_ports'] }}</h3>
-            <span class="badge bg-success">Active</span>
+    <div class="col-sm-6 col-xl-3">
+        <div class="card sg-card p-4 h-100">
+            <small class="text-muted">Operasi Terbatas</small>
+            <h3 class="fw-bold text-warning mb-1">
+                {{ $summary['limited_ports'] }}
+            </h3>
+            <span class="text-warning small">
+                Perlu pemantauan
+            </span>
         </div>
     </div>
 
-    <div class="col-md-2">
-        <div class="card sg-card p-4">
-            <small class="text-muted">Limited Ports</small>
-            <h3 class="fw-bold text-warning">{{ $summary['limited_ports'] }}</h3>
-            <span class="badge bg-warning text-dark">Limited</span>
-        </div>
-    </div>
-
-    <div class="col-md-2">
-        <div class="card sg-card p-4">
-            <small class="text-muted">No Seaport</small>
-            <h3 class="fw-bold text-danger">{{ $summary['no_seaport'] }}</h3>
-            <span class="badge bg-danger">Landlocked</span>
-        </div>
-    </div>
-</div>
-
-{{-- CHART + INFO --}}
-<div class="row g-4 mt-1">
-    <div class="col-lg-5">
-        <div class="card sg-card p-4">
-            <h5 class="fw-bold mb-1">Port Status Distribution</h5>
-            <small class="text-muted">
-                Distribusi status data pelabuhan global.
-            </small>
-
-            <div class="mt-3" style="height: 300px;">
-                <canvas id="portStatusChart"></canvas>
-            </div>
-        </div>
-    </div>
-
-    <div class="col-lg-7">
-        <div class="card sg-card p-4">
-            <h5 class="fw-bold mb-3">Port Dataset Information</h5>
-
-            <div class="alert alert-info">
-                Menu ini digunakan admin untuk memantau dataset pelabuhan yang dipakai
-                pada fitur Port Location Dashboard dan analisis risiko logistik.
-            </div>
-
-            <table class="table align-middle mb-0">
-                <tbody>
-                    <tr>
-                        <td>Dataset Type</td>
-                        <td class="fw-bold text-end">World Port Index / Public Port Dataset</td>
-                    </tr>
-
-                    <tr>
-                        <td>Used For</td>
-                        <td class="fw-bold text-end">Supply Chain Risk Monitoring</td>
-                    </tr>
-
-                    <tr>
-                        <td>Port Indicator</td>
-                        <td class="fw-bold text-end">Capacity, Congestion, Risk Level</td>
-                    </tr>
-
-                    <tr>
-                        <td>Admin Function</td>
-                        <td class="fw-bold text-end">Port Dataset Management</td>
-                    </tr>
-                </tbody>
-            </table>
+    <div class="col-sm-6 col-xl-3">
+        <div class="card sg-card p-4 h-100">
+            <small class="text-muted">Risiko Tinggi</small>
+            <h3 class="fw-bold text-danger mb-1">
+                {{ $summary['high_risk_ports'] }}
+            </h3>
+            <span class="text-danger small">
+                Tinggi atau kritis
+            </span>
         </div>
     </div>
 </div>
 
-{{-- PORT TABLE --}}
-<div class="card sg-card p-4 mt-4">
-    <div class="d-flex justify-content-between align-items-center mb-3">
+<div class="card sg-card p-4">
+    <div
+        class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-3 mb-3"
+    >
         <div>
-            <h5 class="fw-bold mb-1">Ports Dataset</h5>
+            <h5 class="fw-bold mb-1">
+                Dataset Pelabuhan
+            </h5>
+
             <small class="text-muted">
-                Daftar data pelabuhan berdasarkan negara.
+                Data berasal dari tabel ports pada database MySQL.
             </small>
         </div>
 
-        <div style="width: 280px;">
+        <form
+            method="GET"
+            action="{{ route('admin.ports.index') }}"
+            class="d-flex gap-2"
+        >
             <input
                 type="text"
-                id="portSearch"
+                name="search"
                 class="form-control"
-                placeholder="Search port or country..."
+                value="{{ $search }}"
+                placeholder="Cari pelabuhan atau negara..."
+                style="width: 280px; max-width: 100%;"
             >
-        </div>
+
+            <button class="btn btn-outline-primary">
+                <i class="bi bi-search"></i>
+            </button>
+
+            @if($search !== '')
+                <a
+                    href="{{ route('admin.ports.index') }}"
+                    class="btn btn-outline-secondary"
+                >
+                    Reset
+                </a>
+            @endif
+        </form>
     </div>
 
     <div class="table-responsive">
-        <table class="table align-middle">
+        <table class="table table-hover align-middle mb-0">
             <thead>
                 <tr>
                     <th>No</th>
-                    <th>Country</th>
-                    <th>Code</th>
-                    <th>Region</th>
-                    <th>Port Name</th>
-                    <th>City</th>
+                    <th>Pelabuhan</th>
+                    <th>Negara</th>
+                    <th>Koordinat</th>
                     <th>Status</th>
-                    <th>Capacity</th>
-                    <th>Congestion</th>
-                    <th>Risk</th>
-                    <th>Action</th>
+                    <th>Kapasitas</th>
+                    <th>Kemacetan</th>
+                    <th>Risiko</th>
+                    <th class="text-center">Aksi</th>
                 </tr>
             </thead>
 
             <tbody>
-                @foreach($ports as $index => $port)
-                    <tr
-                        class="port-row"
-                        data-search="{{ strtolower($port['country'] . ' ' . $port['country_code'] . ' ' . $port['port_name'] . ' ' . $port['city'] . ' ' . $port['region']) }}"
-                    >
-                        <td>{{ $index + 1 }}</td>
-                        <td class="fw-bold">{{ $port['country'] }}</td>
-                        <td>{{ $port['country_code'] }}</td>
-                        <td>{{ $port['region'] }}</td>
-                        <td>{{ $port['port_name'] }}</td>
-                        <td>{{ $port['city'] }}</td>
-
+                @forelse($ports as $index => $port)
+                    <tr>
                         <td>
-                            @if($port['status'] === 'Active')
-                                <span class="badge bg-success">Active</span>
-                            @elseif($port['status'] === 'Limited')
-                                <span class="badge bg-warning text-dark">Limited</span>
-                            @else
-                                <span class="badge bg-danger">No Seaport</span>
-                            @endif
-                        </td>
-
-                        <td>{{ $port['capacity'] }}</td>
-
-                        <td>
-                            @if($port['congestion_level'] === 'High')
-                                <span class="badge bg-danger">High</span>
-                            @elseif($port['congestion_level'] === 'Medium')
-                                <span class="badge bg-warning text-dark">Medium</span>
-                            @else
-                                <span class="badge bg-success">{{ $port['congestion_level'] }}</span>
-                            @endif
+                            {{ $ports->firstItem() + $index }}
                         </td>
 
                         <td>
-                            @if($port['risk_level'] === 'High')
-                                <span class="badge bg-danger">High</span>
-                            @elseif($port['risk_level'] === 'Medium')
-                                <span class="badge bg-warning text-dark">Medium</span>
+                            <div class="fw-bold">
+                                {{ $port->port_name }}
+                            </div>
+
+                            <small class="text-muted">
+                                {{ $port->city ?: '-' }}
+                            </small>
+                        </td>
+
+                        <td>
+                            <div class="fw-semibold">
+                                {{ $port->country }}
+                            </div>
+
+                            <small class="text-muted">
+                                {{ $port->country_code }}
+                                ·
+                                {{ $port->region ?: '-' }}
+                            </small>
+                        </td>
+
+                        <td class="text-nowrap">
+                            <small>
+                                {{ number_format($port->latitude, 4) }},
+                                {{ number_format($port->longitude, 4) }}
+                            </small>
+                        </td>
+
+                        <td>
+                            @if($port->status === 'active')
+                                <span class="badge bg-success">
+                                    Aktif
+                                </span>
+                            @elseif($port->status === 'limited')
+                                <span class="badge bg-warning text-dark">
+                                    Terbatas
+                                </span>
                             @else
-                                <span class="badge bg-success">Low</span>
+                                <span class="badge bg-secondary">
+                                    Tidak Aktif
+                                </span>
                             @endif
                         </td>
 
                         <td>
-                            <button class="btn btn-sm btn-outline-primary" disabled>
-                                Detail
-                            </button>
+                            {{
+                                [
+                                    'low' => 'Rendah',
+                                    'medium' => 'Sedang',
+                                    'high' => 'Tinggi',
+                                ][$port->capacity] ?? $port->capacity
+                            }}
+                        </td>
+
+                        <td>
+                            {{
+                                [
+                                    'low' => 'Rendah',
+                                    'medium' => 'Sedang',
+                                    'high' => 'Tinggi',
+                                ][$port->congestion_level]
+                                ?? $port->congestion_level
+                            }}
+                        </td>
+
+                        <td>
+                            @php
+                                $riskClasses = [
+                                    'low' => 'bg-success',
+                                    'medium' => 'bg-warning text-dark',
+                                    'high' => 'bg-danger',
+                                    'critical' => 'bg-dark',
+                                ];
+
+                                $riskLabels = [
+                                    'low' => 'Rendah',
+                                    'medium' => 'Sedang',
+                                    'high' => 'Tinggi',
+                                    'critical' => 'Kritis',
+                                ];
+                            @endphp
+
+                            <span
+                                class="badge {{ $riskClasses[$port->risk_level] ?? 'bg-secondary' }}"
+                            >
+                                {{
+                                    $riskLabels[$port->risk_level]
+                                    ?? $port->risk_level
+                                }}
+                            </span>
+                        </td>
+
+                        <td>
+                            <div
+                                class="d-flex justify-content-center gap-2"
+                            >
+                                <button
+                                    type="button"
+                                    class="btn btn-sm btn-outline-primary"
+                                    data-bs-toggle="modal"
+                                    data-bs-target="#editPortModal{{ $port->id }}"
+                                    title="Edit"
+                                >
+                                    <i class="bi bi-pencil-square"></i>
+                                </button>
+
+                                <form
+                                    method="POST"
+                                    action="{{ route('admin.ports.destroy', $port) }}"
+                                    onsubmit="return confirm('Hapus pelabuhan {{ addslashes($port->port_name) }}?')"
+                                >
+                                    @csrf
+                                    @method('DELETE')
+
+                                    <button
+                                        type="submit"
+                                        class="btn btn-sm btn-outline-danger"
+                                        title="Hapus"
+                                    >
+                                        <i class="bi bi-trash3"></i>
+                                    </button>
+                                </form>
+                            </div>
                         </td>
                     </tr>
-                @endforeach
+
+                    <div
+                        class="modal fade"
+                        id="editPortModal{{ $port->id }}"
+                        tabindex="-1"
+                    >
+                        <div class="modal-dialog modal-lg modal-dialog-scrollable">
+                            <div class="modal-content">
+                                <form
+                                    method="POST"
+                                    action="{{ route('admin.ports.update', $port) }}"
+                                >
+                                    @csrf
+                                    @method('PUT')
+
+                                    <div class="modal-header">
+                                        <h5 class="modal-title">
+                                            Edit Pelabuhan
+                                        </h5>
+
+                                        <button
+                                            type="button"
+                                            class="btn-close"
+                                            data-bs-dismiss="modal"
+                                        ></button>
+                                    </div>
+
+                                    <div class="modal-body">
+                                        @include(
+                                            'admin.ports.partials.form',
+                                            ['port' => $port]
+                                        )
+                                    </div>
+
+                                    <div class="modal-footer">
+                                        <button
+                                            type="button"
+                                            class="btn btn-light"
+                                            data-bs-dismiss="modal"
+                                        >
+                                            Batal
+                                        </button>
+
+                                        <button
+                                            type="submit"
+                                            class="btn btn-primary"
+                                        >
+                                            Simpan Perubahan
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                @empty
+                    <tr>
+                        <td
+                            colspan="9"
+                            class="text-center text-muted py-5"
+                        >
+                            <i class="bi bi-geo-alt fs-2 d-block mb-2"></i>
+
+                            Belum ada data pelabuhan.
+                        </td>
+                    </tr>
+                @endforelse
             </tbody>
         </table>
     </div>
 
-    <small class="text-muted">
-        Data ini digunakan sebagai dataset pelabuhan untuk analisis risiko logistik dan rantai pasok global.
-    </small>
+    @if($ports->hasPages())
+        <div class="mt-4">
+            {{
+                $ports
+                    ->onEachSide(1)
+                    ->links('pagination::bootstrap-5')
+            }}
+        </div>
+    @endif
 </div>
 
-{{-- EXPLANATION --}}
-<div class="card sg-card p-4 mt-4">
-    <h5 class="fw-bold mb-3">Manage Ports Explanation</h5>
+<div
+    class="modal fade"
+    id="addPortModal"
+    tabindex="-1"
+>
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <div class="modal-content">
+            <form
+                method="POST"
+                action="{{ route('admin.ports.store') }}"
+            >
+                @csrf
 
-    <p class="text-muted mb-2">
-        Fitur Manage Ports digunakan admin untuk memantau dataset pelabuhan dunia.
-        Dataset ini mendukung fitur Port Location Dashboard, analisis kemacetan pelabuhan,
-        dan risiko keterlambatan pengiriman barang impor.
-    </p>
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        Tambah Pelabuhan
+                    </h5>
 
-    <div class="alert alert-info mb-0">
-        Jika negara tidak memiliki pelabuhan langsung atau bersifat landlocked,
-        sistem menandainya sebagai No Seaport karena membutuhkan akses pelabuhan
-        dari negara tetangga.
+                    <button
+                        type="button"
+                        class="btn-close"
+                        data-bs-dismiss="modal"
+                    ></button>
+                </div>
+
+                <div class="modal-body">
+                    @include(
+                        'admin.ports.partials.form',
+                        ['port' => null]
+                    )
+                </div>
+
+                <div class="modal-footer">
+                    <button
+                        type="button"
+                        class="btn btn-light"
+                        data-bs-dismiss="modal"
+                    >
+                        Batal
+                    </button>
+
+                    <button
+                        type="submit"
+                        class="btn btn-primary"
+                    >
+                        Tambahkan Pelabuhan
+                    </button>
+                </div>
+            </form>
+        </div>
     </div>
 </div>
 
 @endsection
-
-@push('scripts')
-<script>
-    const activePorts = {{ $summary['active_ports'] }};
-    const limitedPorts = {{ $summary['limited_ports'] }};
-    const noSeaport = {{ $summary['no_seaport'] }};
-
-    new Chart(document.getElementById('portStatusChart'), {
-        type: 'doughnut',
-        data: {
-            labels: ['Active', 'Limited', 'No Seaport'],
-            datasets: [{
-                data: [activePorts, limitedPorts, noSeaport]
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false
-        }
-    });
-
-    document.getElementById('portSearch').addEventListener('keyup', function () {
-        const keyword = this.value.toLowerCase();
-        const rows = document.querySelectorAll('.port-row');
-
-        rows.forEach(function (row) {
-            const text = row.getAttribute('data-search');
-
-            if (text.includes(keyword)) {
-                row.style.display = '';
-            } else {
-                row.style.display = 'none';
-            }
-        });
-    });
-</script>
-@endpus

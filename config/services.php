@@ -7,10 +7,7 @@ return [
     | Third Party Services
     |--------------------------------------------------------------------------
     |
-    | This file is for storing the credentials for third party services such
-    | as Mailgun, Postmark, AWS and more. This file provides the de facto
-    | location for this type of information, allowing packages to have
-    | a conventional file to locate the various service credentials.
+    | Konfigurasi layanan pihak ketiga yang digunakan aplikasi.
     |
     */
 
@@ -30,9 +27,42 @@ return [
 
     'slack' => [
         'notifications' => [
-            'bot_user_oauth_token' => env('SLACK_BOT_USER_OAUTH_TOKEN'),
-            'channel' => env('SLACK_BOT_USER_DEFAULT_CHANNEL'),
+            'bot_user_oauth_token' => env(
+                'SLACK_BOT_USER_OAUTH_TOKEN'
+            ),
+
+            'channel' => env(
+                'SLACK_BOT_USER_DEFAULT_CHANNEL'
+            ),
         ],
+    ],
+
+    'rest_countries' => [
+        'key' => env('REST_COUNTRIES_API_KEY'),
+
+        'base_url' => env(
+            'REST_COUNTRIES_BASE_URL',
+            'https://api.restcountries.com/countries/v5'
+        ),
+    ],
+
+    'gnews' => [
+        'key' => env('GNEWS_API_KEY'),
+
+        'base_url' => env(
+            'GNEWS_BASE_URL',
+            'https://gnews.io/api/v4'
+        ),
+
+        'language' => env(
+            'GNEWS_LANGUAGE',
+            'en'
+        ),
+
+        'max_articles' => (int) env(
+            'GNEWS_MAX_ARTICLES',
+            10
+        ),
     ],
 
 ];

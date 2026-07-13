@@ -1,15 +1,16 @@
 @extends('layouts.app')
 
-@section('title', 'Global Country - SupplyGuard')
-@section('page-title', 'Global Country Dashboard')
+@section('title', 'Negara Global - SupplyGuard')
+@section('page-title', 'Dasbor Negara Global')
 
 @section('content')
 <div class="card sg-card p-4 mb-4">
     <div class="d-flex justify-content-between align-items-center">
         <div>
-            <h4 class="fw-bold mb-1">Global Country Dashboard</h4>
+            <h4 class="fw-bold mb-1">Dasbor Negara Global</h4>
             <p class="text-muted mb-0">
-                Monitoring data semua negara, mata uang, bahasa, populasi, wilayah, dan indikator awal risiko supply chain.
+                Pemantauan data semua negara, mata uang, bahasa, populasi, wilayah,
+                dan indikator awal risiko rantai pasok.
             </p>
         </div>
 
@@ -21,11 +22,13 @@
     <div class="col-lg-4">
         <div class="card sg-card p-4">
             <h5 class="fw-bold">Pilih Negara</h5>
+
             <p class="text-muted">
                 Pilih negara dari daftar global untuk melihat detail profil negara.
             </p>
 
-            <label class="form-label">Country</label>
+            <label class="form-label">Negara</label>
+
             <select id="countrySelect" class="form-select mb-3">
                 @foreach($countries as $index => $country)
                     <option value="{{ $index }}">
@@ -49,101 +52,110 @@
         <div class="card sg-card p-4">
             <div class="d-flex justify-content-between align-items-start mb-3">
                 <div>
-                    <h5 class="fw-bold mb-1">Country Profile</h5>
-                    <small class="text-muted">Detail negara berdasarkan data REST Countries API.</small>
+                    <h5 class="fw-bold mb-1">Profil Negara</h5>
+
+                    <small class="text-muted">
+                        Detail negara berdasarkan data REST Countries API.
+                    </small>
                 </div>
 
-                <img id="countryFlag" src="" alt="Flag" style="width: 70px; border-radius: 8px; display: none;">
+                <img
+                    id="countryFlag"
+                    src=""
+                    alt="Bendera"
+                    style="width: 70px; border-radius: 8px; display: none;"
+                >
             </div>
 
             <div class="row g-3">
                 <div class="col-md-6">
                     <div class="border rounded p-3">
-                        <small class="text-muted">Country</small>
+                        <small class="text-muted">Negara</small>
                         <h5 id="countryName" class="mb-0">-</h5>
                     </div>
                 </div>
 
                 <div class="col-md-6">
                     <div class="border rounded p-3">
-                        <small class="text-muted">Official Name</small>
+                        <small class="text-muted">Nama Resmi</small>
                         <h5 id="officialName" class="mb-0">-</h5>
                     </div>
                 </div>
 
                 <div class="col-md-6">
                     <div class="border rounded p-3">
-                        <small class="text-muted">Country Code</small>
+                        <small class="text-muted">Kode Negara</small>
                         <h5 id="countryCode" class="mb-0">-</h5>
                     </div>
                 </div>
 
                 <div class="col-md-6">
                     <div class="border rounded p-3">
-                        <small class="text-muted">Capital</small>
+                        <small class="text-muted">Ibu Kota</small>
                         <h5 id="capital" class="mb-0">-</h5>
                     </div>
                 </div>
 
                 <div class="col-md-6">
                     <div class="border rounded p-3">
-                        <small class="text-muted">Region</small>
+                        <small class="text-muted">Wilayah</small>
                         <h5 id="region" class="mb-0">-</h5>
                     </div>
                 </div>
 
                 <div class="col-md-6">
                     <div class="border rounded p-3">
-                        <small class="text-muted">Subregion</small>
+                        <small class="text-muted">Subwilayah</small>
                         <h5 id="subregion" class="mb-0">-</h5>
                     </div>
                 </div>
 
                 <div class="col-md-6">
                     <div class="border rounded p-3">
-                        <small class="text-muted">Population</small>
+                        <small class="text-muted">Populasi</small>
                         <h5 id="population" class="mb-0">-</h5>
                     </div>
                 </div>
 
                 <div class="col-md-6">
                     <div class="border rounded p-3">
-                        <small class="text-muted">Currency</small>
+                        <small class="text-muted">Mata Uang</small>
                         <h5 id="currency" class="mb-0">-</h5>
                     </div>
                 </div>
 
                 <div class="col-md-12">
                     <div class="border rounded p-3">
-                        <small class="text-muted">Languages</small>
+                        <small class="text-muted">Bahasa</small>
                         <h5 id="languages" class="mb-0">-</h5>
                     </div>
                 </div>
             </div>
 
             <div class="alert alert-primary mt-4 mb-0">
-                Data negara ini akan dipakai sebagai dasar untuk fitur cuaca, kurs mata uang,
-                risk scoring, comparison country, dan watchlist.
+                Data negara ini akan digunakan sebagai dasar untuk fitur cuaca,
+                kurs mata uang, penilaian risiko, perbandingan negara,
+                dan daftar pemantauan.
             </div>
         </div>
     </div>
 </div>
 
 <div class="card sg-card p-4 mt-4">
-    <h5 class="fw-bold mb-3">Global Country Dataset Preview</h5>
+    <h5 class="fw-bold mb-3">Pratinjau Dataset Negara Global</h5>
 
     <div class="table-responsive">
         <table class="table align-middle">
             <thead>
                 <tr>
                     <th>No</th>
-                    <th>Flag</th>
-                    <th>Country</th>
-                    <th>Code</th>
-                    <th>Capital</th>
-                    <th>Region</th>
-                    <th>Population</th>
-                    <th>Currency</th>
+                    <th>Bendera</th>
+                    <th>Negara</th>
+                    <th>Kode</th>
+                    <th>Ibu Kota</th>
+                    <th>Wilayah</th>
+                    <th>Populasi</th>
+                    <th>Mata Uang</th>
                 </tr>
             </thead>
 
@@ -151,13 +163,19 @@
                 @foreach(array_slice($countries, 0, 20) as $index => $country)
                     <tr>
                         <td>{{ $index + 1 }}</td>
+
                         <td>
                             @if($country['flag'])
-                                <img src="{{ $country['flag'] }}" alt="Flag" style="width: 35px; border-radius: 4px;">
+                                <img
+                                    src="{{ $country['flag'] }}"
+                                    alt="Bendera"
+                                    style="width: 35px; border-radius: 4px;"
+                                >
                             @else
                                 -
                             @endif
                         </td>
+
                         <td>{{ $country['name'] }}</td>
                         <td>{{ $country['code'] }}</td>
                         <td>{{ $country['capital'] }}</td>
@@ -171,7 +189,8 @@
     </div>
 
     <small class="text-muted">
-        Tabel ini menampilkan 20 negara pertama sebagai preview. Data lengkap tetap tersedia di dropdown.
+        Tabel ini menampilkan 20 negara pertama sebagai pratinjau.
+        Data lengkap tetap tersedia di daftar pilihan negara.
     </small>
 </div>
 @endsection

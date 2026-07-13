@@ -3,222 +3,241 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use Illuminate\Support\Facades\Http;
+use App\Models\Port;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
+use Illuminate\View\View;
 
 class PortController extends Controller
 {
-    public function index()
+    /**
+     * Menampilkan dataset pelabuhan.
+     */
+    public function index(Request $request): View
     {
-        $countries = [];
+        $search = trim((string) $request->query('search', ''));
 
-        try {
-            $url = 'https://restcountries.com/v3.1/all?fields=name,cca2,capital,region,subregion,flags,latlng,landlocked';
-
-            $response = Http::timeout(30)
-                ->withOptions(['verify' => false])
-                ->get($url);
-
-            if ($response->successful()) {
-                $countries = $this->mapRestCountries($response->json());
-            }
-        } catch (\Exception $e) {
-            $countries = [];
-        }
-
-        if (count($countries) < 100) {
-            try {
-                $backupUrl = 'https://raw.githubusercontent.com/mledoze/countries/master/countries.json';
-
-                $backupResponse = Http::timeout(30)
-                    ->withOptions(['verify' => false])
-                    ->get($backupUrl);
-
-                if ($backupResponse->successful()) {
-                    $countries = $this->mapMledozeCountries($backupResponse->json());
-                }
-            } catch (\Exception $e) {
-                $countries = [];
-            }
-        }
-
-        if (count($countries) === 0) {
-            $countries = $this->fallbackCountries();
-        }
-
-        $ports = collect($countries)
-            ->map(function ($country, $index) {
-                return $this->addPortData($country, $index);
+        $ports = Port::query()
+            ->when($search !== '', function ($query) use ($search) {
+                $query->where(function ($subQuery) use ($search) {
+                    $subQuery
+                        ->where('port_name', 'like', "%{$search}%")
+                        ->orWhere('country', 'like', "%{$search}%")
+                        ->orWhere('country_code', 'like', "%{$search}%")
+                        ->orWhere('city', 'like', "%{$search}%")
+                        ->orWhere('region', 'like', "%{$search}%");
+                });
             })
-            ->sortBy('country')
-            ->values()
-            ->toArray();
+            ->orderBy('country')
+            ->orderBy('port_name')
+            ->paginate(15)
+            ->withQueryString();
 
         $summary = [
-            'total_countries' => count($countries),
-            'total_ports' => count($ports),
-            'active_ports' => collect($ports)->where('status', 'Active')->count(),
-            'limited_ports' => collect($ports)->where('status', 'Limited')->count(),
-            'no_seaport' => collect($ports)->where('status', 'No Seaport')->count(),
+            'total_ports' => Port::query()->count(),
+
+            'active_ports' => Port::query()
+                ->where('status', 'active')
+                ->count(),
+
+            'limited_ports' => Port::query()
+                ->where('status', 'limited')
+                ->count(),
+
+            'high_risk_ports' => Port::query()
+                ->whereIn('risk_level', [
+                    'high',
+                    'critical',
+                ])
+                ->count(),
         ];
 
-        return view('admin.ports.index', compact('ports', 'summary'));
+        return view(
+            'admin.ports.index',
+            compact(
+                'ports',
+                'summary',
+                'search'
+            )
+        );
     }
 
-    private function mapRestCountries(array $items)
+    /**
+     * Menambahkan data pelabuhan.
+     */
+    public function store(Request $request): RedirectResponse
     {
-        return collect($items)
-            ->map(function ($country) {
-                return [
-                    'name' => $country['name']['common'] ?? '-',
-                    'code' => $country['cca2'] ?? '-',
-                    'capital' => $country['capital'][0] ?? '-',
-                    'region' => $country['region'] ?? '-',
-                    'subregion' => $country['subregion'] ?? '-',
-                    'flag' => $country['flags']['png'] ?? '',
-                    'latitude' => $country['latlng'][0] ?? 0,
-                    'longitude' => $country['latlng'][1] ?? 0,
-                    'landlocked' => $country['landlocked'] ?? false,
-                ];
-            })
-            ->sortBy('name')
-            ->values()
-            ->toArray();
+        $data = $this->validatePort($request);
+
+        Port::query()->create($data);
+
+        return redirect()
+            ->route('admin.ports.index')
+            ->with(
+                'success',
+                'Data pelabuhan berhasil ditambahkan.'
+            );
     }
 
-    private function mapMledozeCountries(array $items)
-    {
-        return collect($items)
-            ->map(function ($country) {
-                return [
-                    'name' => $country['name']['common'] ?? '-',
-                    'code' => $country['cca2'] ?? '-',
-                    'capital' => $country['capital'][0] ?? '-',
-                    'region' => $country['region'] ?? '-',
-                    'subregion' => $country['subregion'] ?? '-',
-                    'flag' => '',
-                    'latitude' => $country['latlng'][0] ?? 0,
-                    'longitude' => $country['latlng'][1] ?? 0,
-                    'landlocked' => $country['landlocked'] ?? false,
-                ];
-            })
-            ->sortBy('name')
-            ->values()
-            ->toArray();
+    /**
+     * Memperbarui data pelabuhan.
+     */
+    public function update(
+        Request $request,
+        Port $port
+    ): RedirectResponse {
+        $data = $this->validatePort($request);
+
+        $port->update($data);
+
+        return redirect()
+            ->route('admin.ports.index')
+            ->with(
+                'success',
+                'Data pelabuhan berhasil diperbarui.'
+            );
     }
 
-    private function addPortData(array $country, int $index)
+    /**
+     * Menghapus data pelabuhan.
+     */
+    public function destroy(Port $port): RedirectResponse
     {
-        $knownPorts = [
-            'ID' => ['Tanjung Priok Port', 'Jakarta', -6.1045, 106.8860],
-            'CN' => ['Shanghai Port', 'Shanghai', 31.2304, 121.4737],
-            'DE' => ['Port of Hamburg', 'Hamburg', 53.5511, 9.9937],
-            'SG' => ['Port of Singapore', 'Singapore', 1.2644, 103.8200],
-            'JP' => ['Port of Yokohama', 'Yokohama', 35.4437, 139.6380],
-            'AU' => ['Port Botany', 'Sydney', -33.9608, 151.2250],
-            'US' => ['Port of Los Angeles', 'Los Angeles', 33.7405, -118.2775],
-            'GB' => ['Port of Felixstowe', 'Felixstowe', 51.9542, 1.3511],
-            'MY' => ['Port Klang', 'Selangor', 3.0000, 101.4000],
-            'TH' => ['Laem Chabang Port', 'Chonburi', 13.0827, 100.8830],
-        ];
+        $portName = $port->port_name;
 
-        $seed = abs(crc32($country['name'] . $country['code']));
+        $port->delete();
 
-        if ($country['landlocked']) {
-            return [
-                'id' => $index + 1,
-                'country' => $country['name'],
-                'country_code' => $country['code'],
-                'region' => $country['region'],
-                'port_name' => 'No Direct Seaport',
-                'city' => $country['capital'],
-                'latitude' => $country['latitude'],
-                'longitude' => $country['longitude'],
-                'status' => 'No Seaport',
-                'capacity' => 'N/A',
-                'congestion_level' => 'High Dependency',
-                'risk_level' => 'High',
-                'notes' => 'Negara landlocked, membutuhkan akses pelabuhan dari negara tetangga.',
-            ];
-        }
-
-        if (isset($knownPorts[$country['code']])) {
-            $port = $knownPorts[$country['code']];
-
-            return [
-                'id' => $index + 1,
-                'country' => $country['name'],
-                'country_code' => $country['code'],
-                'region' => $country['region'],
-                'port_name' => $port[0],
-                'city' => $port[1],
-                'latitude' => $port[2],
-                'longitude' => $port[3],
-                'status' => 'Active',
-                'capacity' => 'High',
-                'congestion_level' => 'Medium',
-                'risk_level' => 'Low',
-                'notes' => 'Pelabuhan utama tersedia dan cocok untuk aktivitas impor.',
-            ];
-        }
-
-        $status = $seed % 4 === 0 ? 'Limited' : 'Active';
-        $capacity = $seed % 3 === 0 ? 'Medium' : 'High';
-        $congestion = $seed % 5 === 0 ? 'High' : 'Medium';
-        $riskLevel = $status === 'Limited' || $congestion === 'High' ? 'Medium' : 'Low';
-
-        return [
-            'id' => $index + 1,
-            'country' => $country['name'],
-            'country_code' => $country['code'],
-            'region' => $country['region'],
-            'port_name' => 'Main International Port of ' . $country['name'],
-            'city' => $country['capital'],
-            'latitude' => $country['latitude'],
-            'longitude' => $country['longitude'],
-            'status' => $status,
-            'capacity' => $capacity,
-            'congestion_level' => $congestion,
-            'risk_level' => $riskLevel,
-            'notes' => 'Data pelabuhan publik untuk kebutuhan monitoring rantai pasok.',
-        ];
+        return redirect()
+            ->route('admin.ports.index')
+            ->with(
+                'success',
+                'Pelabuhan '
+                . $portName
+                . ' berhasil dihapus.'
+            );
     }
 
-    private function fallbackCountries()
+    /**
+     * Validasi data pelabuhan.
+     */
+    private function validatePort(Request $request): array
     {
-        return [
-            [
-                'name' => 'Indonesia',
-                'code' => 'ID',
-                'capital' => 'Jakarta',
-                'region' => 'Asia',
-                'subregion' => 'Southeast Asia',
-                'flag' => '',
-                'latitude' => -6.2,
-                'longitude' => 106.8,
-                'landlocked' => false,
+        $validated = $request->validate([
+            'port_name' => [
+                'required',
+                'string',
+                'max:255',
             ],
-            [
-                'name' => 'Germany',
-                'code' => 'DE',
-                'capital' => 'Berlin',
-                'region' => 'Europe',
-                'subregion' => 'Western Europe',
-                'flag' => '',
-                'latitude' => 52.5,
-                'longitude' => 13.4,
-                'landlocked' => false,
+
+            'country' => [
+                'required',
+                'string',
+                'max:150',
             ],
-            [
-                'name' => 'China',
-                'code' => 'CN',
-                'capital' => 'Beijing',
-                'region' => 'Asia',
-                'subregion' => 'Eastern Asia',
-                'flag' => '',
-                'latitude' => 39.9,
-                'longitude' => 116.4,
-                'landlocked' => false,
+
+            'country_code' => [
+                'required',
+                'string',
+                'size:3',
             ],
-        ];
+
+            'city' => [
+                'nullable',
+                'string',
+                'max:150',
+            ],
+
+            'region' => [
+                'nullable',
+                'string',
+                'max:100',
+            ],
+
+            'latitude' => [
+                'required',
+                'numeric',
+                'between:-90,90',
+            ],
+
+            'longitude' => [
+                'required',
+                'numeric',
+                'between:-180,180',
+            ],
+
+            'status' => [
+                'required',
+                Rule::in([
+                    'active',
+                    'limited',
+                    'inactive',
+                ]),
+            ],
+
+            'capacity' => [
+                'required',
+                Rule::in([
+                    'low',
+                    'medium',
+                    'high',
+                ]),
+            ],
+
+            'congestion_level' => [
+                'required',
+                Rule::in([
+                    'low',
+                    'medium',
+                    'high',
+                ]),
+            ],
+
+            'risk_level' => [
+                'required',
+                Rule::in([
+                    'low',
+                    'medium',
+                    'high',
+                    'critical',
+                ]),
+            ],
+
+            'notes' => [
+                'nullable',
+                'string',
+                'max:2000',
+            ],
+        ], [
+            'port_name.required' =>
+                'Nama pelabuhan wajib diisi.',
+
+            'country.required' =>
+                'Nama negara wajib diisi.',
+
+            'country_code.required' =>
+                'Kode negara wajib diisi.',
+
+            'country_code.size' =>
+                'Kode negara harus terdiri dari tiga karakter.',
+
+            'latitude.required' =>
+                'Latitude wajib diisi.',
+
+            'longitude.required' =>
+                'Longitude wajib diisi.',
+
+            'latitude.between' =>
+                'Latitude harus berada antara -90 sampai 90.',
+
+            'longitude.between' =>
+                'Longitude harus berada antara -180 sampai 180.',
+        ]);
+
+        $validated['country_code'] = strtoupper(
+            $validated['country_code']
+        );
+
+        return $validated;
     }
 }

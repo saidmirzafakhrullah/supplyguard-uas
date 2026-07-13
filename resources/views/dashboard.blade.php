@@ -1,7 +1,7 @@
 @extends('layouts.app')
 
-@section('title', 'Dashboard - SupplyGuard')
-@section('page-title', 'Dashboard Overview')
+@section('title', 'Dasbor - SupplyGuard')
+@section('page-title', 'Ringkasan Dasbor')
 
 @section('content')
 <div class="row g-4">
@@ -9,9 +9,9 @@
         <div class="card sg-card p-4">
             <div class="d-flex justify-content-between align-items-center">
                 <div>
-                    <small class="text-muted">Global Countries</small>
+                    <small class="text-muted">Negara Global</small>
                     <h3 class="fw-bold mb-0">{{ $summary['countries'] }}</h3>
-                    <small class="text-muted">All countries dataset</small>
+                    <small class="text-muted">Dataset seluruh negara</small>
                 </div>
                 <div class="sg-stat-icon">
                     <i class="bi bi-globe2"></i>
@@ -24,9 +24,9 @@
         <div class="card sg-card p-4">
             <div class="d-flex justify-content-between align-items-center">
                 <div>
-                    <small class="text-muted">Global Ports</small>
+                    <small class="text-muted">Pelabuhan Global</small>
                     <h3 class="fw-bold mb-0">{{ $summary['ports'] }}</h3>
-                    <small class="text-muted">Port monitoring</small>
+                    <small class="text-muted">Pemantauan pelabuhan</small>
                 </div>
                 <div class="sg-stat-icon">
                     <i class="bi bi-geo-alt"></i>
@@ -39,9 +39,9 @@
         <div class="card sg-card p-4">
             <div class="d-flex justify-content-between align-items-center">
                 <div>
-                    <small class="text-muted">News Intelligence</small>
+                    <small class="text-muted">Intelijen Berita</small>
                     <h3 class="fw-bold mb-0">{{ $summary['news'] }}</h3>
-                    <small class="text-muted">Cached articles</small>
+                    <small class="text-muted">Artikel tersimpan</small>
                 </div>
                 <div class="sg-stat-icon">
                     <i class="bi bi-newspaper"></i>
@@ -54,9 +54,9 @@
         <div class="card sg-card p-4">
             <div class="d-flex justify-content-between align-items-center">
                 <div>
-                    <small class="text-muted">Average Risk</small>
+                    <small class="text-muted">Rata-rata Risiko</small>
                     <h3 class="fw-bold mb-0">{{ $summary['average_risk'] }}%</h3>
-                    <small class="text-muted">Supply chain risk</small>
+                    <small class="text-muted">Risiko rantai pasok</small>
                 </div>
                 <div class="sg-stat-icon">
                     <i class="bi bi-activity"></i>
@@ -69,30 +69,30 @@
 <div class="row g-4 mt-1">
     <div class="col-md-4">
         <div class="card sg-card p-4">
-            <small class="text-muted">Low Risk Countries</small>
+            <small class="text-muted">Negara Berisiko Rendah</small>
             <div class="d-flex justify-content-between align-items-center mt-2">
                 <h2 class="fw-bold text-success">{{ $summary['low_risk'] }}</h2>
-                <span class="badge-soft risk-low">Safe Route</span>
+                <span class="badge-soft risk-low">Jalur Aman</span>
             </div>
         </div>
     </div>
 
     <div class="col-md-4">
         <div class="card sg-card p-4">
-            <small class="text-muted">Medium Risk Countries</small>
+            <small class="text-muted">Negara Berisiko Sedang</small>
             <div class="d-flex justify-content-between align-items-center mt-2">
                 <h2 class="fw-bold text-warning">{{ $summary['medium_risk'] }}</h2>
-                <span class="badge-soft risk-medium">Watch Carefully</span>
+                <span class="badge-soft risk-medium">Pantau dengan Cermat</span>
             </div>
         </div>
     </div>
 
     <div class="col-md-4">
         <div class="card sg-card p-4">
-            <small class="text-muted">High Risk Countries</small>
+            <small class="text-muted">Negara Berisiko Tinggi</small>
             <div class="d-flex justify-content-between align-items-center mt-2">
                 <h2 class="fw-bold text-danger">{{ $summary['high_risk'] }}</h2>
-                <span class="badge-soft risk-high">Delay Possible</span>
+                <span class="badge-soft risk-high">Berpotensi Terlambat</span>
             </div>
         </div>
     </div>
@@ -103,8 +103,8 @@
         <div class="card sg-card p-4">
             <div class="d-flex justify-content-between align-items-center mb-3">
                 <div>
-                    <h5 class="fw-bold mb-0">Risk Score by Country</h5>
-                    <small class="text-muted">SG-Risk Weighted Scoring Algorithm</small>
+                    <h5 class="fw-bold mb-0">Skor Risiko per Negara</h5>
+                    <small class="text-muted">Algoritma Pembobotan SG-Risk</small>
                 </div>
                 <span class="badge bg-primary">Chart.js</span>
             </div>
@@ -117,8 +117,8 @@
 
     <div class="col-lg-4">
         <div class="card sg-card p-4">
-            <h5 class="fw-bold mb-0">Risk Distribution</h5>
-            <small class="text-muted">Low, medium, and high risk summary</small>
+            <h5 class="fw-bold mb-0">Distribusi Risiko</h5>
+            <small class="text-muted">Ringkasan risiko rendah, sedang, dan tinggi</small>
 
             <div style="height: 280px;">
                 <canvas id="riskPieChart" class="mt-3"></canvas>
@@ -132,8 +132,10 @@
         <div class="card sg-card p-4">
             <div class="d-flex justify-content-between align-items-center mb-3">
                 <div>
-                    <h5 class="fw-bold mb-0">Global Port Monitoring Map</h5>
-                    <small class="text-muted">Interactive port location dashboard using Leaflet.js</small>
+                    <h5 class="fw-bold mb-0">Peta Pemantauan Pelabuhan Global</h5>
+                    <small class="text-muted">
+                        Dasbor lokasi pelabuhan interaktif menggunakan Leaflet.js
+                    </small>
                 </div>
                 <span class="badge bg-success">Leaflet.js</span>
             </div>
@@ -144,32 +146,45 @@
 
     <div class="col-lg-5">
         <div class="card sg-card p-4">
-            <h5 class="fw-bold mb-3">Latest Supply Chain News</h5>
+            <h5 class="fw-bold mb-3">Berita Rantai Pasok Terbaru</h5>
 
             <div class="table-responsive">
                 <table class="table align-middle">
                     <thead>
                     <tr>
-                        <th>News</th>
-                        <th>Country</th>
-                        <th>Risk</th>
+                        <th>Berita</th>
+                        <th>Negara</th>
+                        <th>Risiko</th>
                     </tr>
                     </thead>
+
                     <tbody>
                     @foreach($latestNews as $item)
                         <tr>
                             <td>
                                 <div class="fw-semibold">{{ $item['title'] }}</div>
-                                <small class="text-muted">Sentiment: {{ $item['sentiment'] }}</small>
+
+                                <small class="text-muted">
+                                    Sentimen:
+                                    {{
+                                        [
+                                            'Positive' => 'Positif',
+                                            'Neutral' => 'Netral',
+                                            'Negative' => 'Negatif'
+                                        ][$item['sentiment']] ?? $item['sentiment']
+                                    }}
+                                </small>
                             </td>
+
                             <td>{{ $item['country'] }}</td>
+
                             <td>
                                 @if($item['risk'] == 'High')
-                                    <span class="badge-soft risk-high">High</span>
+                                    <span class="badge-soft risk-high">Tinggi</span>
                                 @elseif($item['risk'] == 'Medium')
-                                    <span class="badge-soft risk-medium">Medium</span>
+                                    <span class="badge-soft risk-medium">Sedang</span>
                                 @else
-                                    <span class="badge-soft risk-low">Low</span>
+                                    <span class="badge-soft risk-low">Rendah</span>
                                 @endif
                             </td>
                         </tr>
@@ -185,11 +200,12 @@
 <div class="row g-4 mt-1">
     <div class="col-12">
         <div class="card sg-card p-4">
-            <h5 class="fw-bold">SupplyGuard Decision Support Summary</h5>
+            <h5 class="fw-bold">Ringkasan Pendukung Keputusan SupplyGuard</h5>
+
             <p class="text-muted mb-0">
                 Sistem ini dirancang untuk membantu perusahaan memantau risiko impor berdasarkan data semua negara,
                 cuaca, inflasi, kurs mata uang, berita global, dan ketersediaan pelabuhan. Nilai risiko dihitung
-                menggunakan algoritma pembobotan SG-Risk Weighted Scoring Algorithm.
+                menggunakan Algoritma Pembobotan SG-Risk.
             </p>
         </div>
     </div>
@@ -206,7 +222,7 @@
         data: {
             labels: riskLabels,
             datasets: [{
-                label: 'Risk Score',
+                label: 'Skor Risiko',
                 data: riskData,
                 borderWidth: 1
             }]
@@ -226,7 +242,7 @@
     new Chart(document.getElementById('riskPieChart'), {
         type: 'doughnut',
         data: {
-            labels: ['Low Risk', 'Medium Risk', 'High Risk'],
+            labels: ['Risiko Rendah', 'Risiko Sedang', 'Risiko Tinggi'],
             datasets: [{
                 data: [
                     {{ $summary['low_risk'] }},
@@ -250,26 +266,26 @@
 
     const ports = [
         {
-            name: 'Tanjung Priok Port',
+            name: 'Pelabuhan Tanjung Priok',
             country: 'Indonesia',
             lat: -6.104,
             lng: 106.880
         },
         {
-            name: 'Shanghai Port',
-            country: 'China',
+            name: 'Pelabuhan Shanghai',
+            country: 'Tiongkok',
             lat: 31.230,
             lng: 121.473
         },
         {
-            name: 'Hamburg Port',
-            country: 'Germany',
+            name: 'Pelabuhan Hamburg',
+            country: 'Jerman',
             lat: 53.546,
             lng: 9.966
         },
         {
-            name: 'Singapore Port',
-            country: 'Singapore',
+            name: 'Pelabuhan Singapura',
+            country: 'Singapura',
             lat: 1.264,
             lng: 103.840
         }
@@ -280,8 +296,8 @@
             .addTo(map)
             .bindPopup(`
                 <b>${port.name}</b><br>
-                Country: ${port.country}<br>
-                Status: Active
+                Negara: ${port.country}<br>
+                Status: Aktif
             `);
     });
 </script>

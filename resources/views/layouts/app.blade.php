@@ -2,7 +2,7 @@
 <html lang="id">
 <head>
     <meta charset="UTF-8">
-    <title>@yield('title', 'SupplyGuard Intelligence Platform')</title>
+    <title>@yield('title', 'Platform Intelijen SupplyGuard')</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
 
     @vite(['resources/css/app.css', 'resources/js/app.js'])
@@ -158,20 +158,20 @@
 <div class="sg-content">
     <div class="sg-navbar d-flex justify-content-between align-items-center">
         <div>
-            <h5 class="mb-0 fw-bold">@yield('page-title', 'Dashboard')</h5>
-            <small class="text-muted">Global Supply Chain Risk Intelligence Platform</small>
+            <h5 class="mb-0 fw-bold">@yield('page-title', 'Dasbor')</h5>
+            <small class="text-muted">Platform Intelijen Risiko Rantai Pasok Global</small>
         </div>
 
         <div class="d-flex align-items-center gap-3">
             <div class="text-end">
-                <div class="fw-bold">{{ Auth::user()->name ?? 'User' }}</div>
+                <div class="fw-bold">{{ Auth::user()->name ?? 'Pengguna' }}</div>
                 <small class="text-muted">{{ Auth::user()->email ?? '-' }}</small>
             </div>
 
             <form method="POST" action="{{ route('logout') }}">
                 @csrf
                 <button class="btn btn-outline-danger btn-sm">
-                    <i class="bi bi-box-arrow-right"></i> Logout
+                    <i class="bi bi-box-arrow-right"></i> Keluar
                 </button>
             </form>
         </div>

@@ -1,56 +1,56 @@
 @extends('layouts.app')
 
-@section('title', 'Data Visualization - SupplyGuard')
-@section('page-title', 'Data Visualization Dashboard')
+@section('title', 'Visualisasi Data - SupplyGuard')
+@section('page-title', 'Dasbor Visualisasi Data')
 
 @section('content')
 
-{{-- HEADER --}}
+{{-- BAGIAN JUDUL --}}
 <div class="card sg-card p-4 mb-4">
     <div class="d-flex justify-content-between align-items-center">
         <div>
-            <h4 class="fw-bold mb-1">Data Visualization Dashboard</h4>
+            <h4 class="fw-bold mb-1">Dasbor Visualisasi Data</h4>
             <p class="text-muted mb-0">
                 Visualisasi data risiko rantai pasok global berdasarkan semua negara,
                 cuaca, kurs, berita, pelabuhan, dan inflasi.
             </p>
         </div>
 
-        <span class="badge bg-primary">Chart.js Analytics</span>
+        <span class="badge bg-primary">Analitik Chart.js</span>
     </div>
 </div>
 
-{{-- SUMMARY CARDS --}}
+{{-- KARTU RINGKASAN --}}
 <div class="row g-4">
     <div class="col-md-3">
         <div class="card sg-card p-4">
-            <small class="text-muted">Total Countries</small>
+            <small class="text-muted">Total Negara</small>
             <h3 class="fw-bold">{{ $summary['total_countries'] }}</h3>
-            <span class="badge bg-primary">All Countries</span>
+            <span class="badge bg-primary">Seluruh Negara</span>
         </div>
     </div>
 
     <div class="col-md-3">
         <div class="card sg-card p-4">
-            <small class="text-muted">Average Risk</small>
+            <small class="text-muted">Rata-rata Risiko</small>
             <h3 class="fw-bold">{{ $summary['average_risk'] }}%</h3>
-            <span class="badge-soft risk-medium">Global Average</span>
+            <span class="badge-soft risk-medium">Rata-rata Global</span>
         </div>
     </div>
 
     <div class="col-md-3">
         <div class="card sg-card p-4">
-            <small class="text-muted">Low Risk</small>
+            <small class="text-muted">Risiko Rendah</small>
             <h3 class="fw-bold text-success">{{ $summary['low_risk'] }}</h3>
-            <span class="badge-soft risk-low">Safe</span>
+            <span class="badge-soft risk-low">Aman</span>
         </div>
     </div>
 
     <div class="col-md-3">
         <div class="card sg-card p-4">
-            <small class="text-muted">Medium Risk</small>
+            <small class="text-muted">Risiko Sedang</small>
             <h3 class="fw-bold text-warning">{{ $summary['medium_risk'] }}</h3>
-            <span class="badge-soft risk-medium">Monitor</span>
+            <span class="badge-soft risk-medium">Pantau</span>
         </div>
     </div>
 </div>
@@ -58,26 +58,26 @@
 <div class="row g-4 mt-1">
     <div class="col-md-6">
         <div class="card sg-card p-4">
-            <small class="text-muted">High Risk</small>
+            <small class="text-muted">Risiko Tinggi</small>
             <h3 class="fw-bold text-danger">{{ $summary['high_risk'] }}</h3>
-            <span class="badge-soft risk-high">Attention</span>
+            <span class="badge-soft risk-high">Perlu Perhatian</span>
         </div>
     </div>
 
     <div class="col-md-6">
         <div class="card sg-card p-4">
-            <small class="text-muted">Critical Risk</small>
+            <small class="text-muted">Risiko Kritis</small>
             <h3 class="fw-bold text-dark">{{ $summary['critical_risk'] }}</h3>
-            <span class="badge bg-dark text-white">Critical</span>
+            <span class="badge bg-dark text-white">Kritis</span>
         </div>
     </div>
 </div>
 
-{{-- CHART ROW 1 --}}
+{{-- BARIS GRAFIK 1 --}}
 <div class="row g-4 mt-1">
     <div class="col-lg-7">
         <div class="card sg-card p-4">
-            <h5 class="fw-bold mb-1">Top 10 Highest Risk Countries</h5>
+            <h5 class="fw-bold mb-1">10 Negara dengan Risiko Tertinggi</h5>
             <small class="text-muted">
                 Negara dengan nilai risiko rantai pasok tertinggi.
             </small>
@@ -90,7 +90,7 @@
 
     <div class="col-lg-5">
         <div class="card sg-card p-4">
-            <h5 class="fw-bold mb-1">Risk Distribution</h5>
+            <h5 class="fw-bold mb-1">Distribusi Risiko</h5>
             <small class="text-muted">
                 Distribusi kategori risiko global.
             </small>
@@ -102,11 +102,11 @@
     </div>
 </div>
 
-{{-- CHART ROW 2 --}}
+{{-- BARIS GRAFIK 2 --}}
 <div class="row g-4 mt-1">
     <div class="col-lg-6">
         <div class="card sg-card p-4">
-            <h5 class="fw-bold mb-1">Average Risk by Region</h5>
+            <h5 class="fw-bold mb-1">Rata-rata Risiko Berdasarkan Wilayah</h5>
             <small class="text-muted">
                 Rata-rata risiko berdasarkan wilayah.
             </small>
@@ -119,7 +119,7 @@
 
     <div class="col-lg-6">
         <div class="card sg-card p-4">
-            <h5 class="fw-bold mb-1">Risk Indicator Comparison</h5>
+            <h5 class="fw-bold mb-1">Perbandingan Indikator Risiko</h5>
             <small class="text-muted">
                 Rata-rata indikator risiko dari semua negara.
             </small>
@@ -131,20 +131,20 @@
     </div>
 </div>
 
-{{-- TABLE ROW --}}
+{{-- BARIS TABEL --}}
 <div class="row g-4 mt-1">
     <div class="col-lg-6">
         <div class="card sg-card p-4">
-            <h5 class="fw-bold mb-3">Highest Risk Countries</h5>
+            <h5 class="fw-bold mb-3">Negara dengan Risiko Tertinggi</h5>
 
             <div class="table-responsive">
                 <table class="table align-middle">
                     <thead>
                         <tr>
                             <th>No</th>
-                            <th>Country</th>
-                            <th>Region</th>
-                            <th>Risk</th>
+                            <th>Negara</th>
+                            <th>Wilayah</th>
+                            <th>Risiko</th>
                             <th>Status</th>
                         </tr>
                     </thead>
@@ -158,7 +158,14 @@
                                 <td class="fw-bold">{{ $country['risk_score'] }}</td>
                                 <td>
                                     <span class="badge-soft {{ $country['badge'] }}">
-                                        {{ $country['category'] }}
+                                        {{
+                                            [
+                                                'Low' => 'Rendah',
+                                                'Medium' => 'Sedang',
+                                                'High' => 'Tinggi',
+                                                'Critical' => 'Kritis'
+                                            ][$country['category']] ?? $country['category']
+                                        }}
                                     </span>
                                 </td>
                             </tr>
@@ -171,16 +178,16 @@
 
     <div class="col-lg-6">
         <div class="card sg-card p-4">
-            <h5 class="fw-bold mb-3">Lowest Risk Countries</h5>
+            <h5 class="fw-bold mb-3">Negara dengan Risiko Terendah</h5>
 
             <div class="table-responsive">
                 <table class="table align-middle">
                     <thead>
                         <tr>
                             <th>No</th>
-                            <th>Country</th>
-                            <th>Region</th>
-                            <th>Risk</th>
+                            <th>Negara</th>
+                            <th>Wilayah</th>
+                            <th>Risiko</th>
                             <th>Status</th>
                         </tr>
                     </thead>
@@ -194,7 +201,14 @@
                                 <td class="fw-bold">{{ $country['risk_score'] }}</td>
                                 <td>
                                     <span class="badge-soft {{ $country['badge'] }}">
-                                        {{ $country['category'] }}
+                                        {{
+                                            [
+                                                'Low' => 'Rendah',
+                                                'Medium' => 'Sedang',
+                                                'High' => 'Tinggi',
+                                                'Critical' => 'Kritis'
+                                            ][$country['category']] ?? $country['category']
+                                        }}
                                     </span>
                                 </td>
                             </tr>
@@ -206,23 +220,23 @@
     </div>
 </div>
 
-{{-- ALL COUNTRIES PREVIEW --}}
+{{-- PRATINJAU SELURUH NEGARA --}}
 <div class="card sg-card p-4 mt-4">
-    <h5 class="fw-bold mb-3">All Countries Visualization Preview</h5>
+    <h5 class="fw-bold mb-3">Pratinjau Visualisasi Seluruh Negara</h5>
 
     <div class="table-responsive">
         <table class="table align-middle">
             <thead>
                 <tr>
                     <th>No</th>
-                    <th>Country</th>
-                    <th>Region</th>
-                    <th>Weather</th>
-                    <th>Currency</th>
-                    <th>News</th>
-                    <th>Port</th>
-                    <th>Inflation</th>
-                    <th>Total Risk</th>
+                    <th>Negara</th>
+                    <th>Wilayah</th>
+                    <th>Cuaca</th>
+                    <th>Mata Uang</th>
+                    <th>Berita</th>
+                    <th>Pelabuhan</th>
+                    <th>Inflasi</th>
+                    <th>Total Risiko</th>
                     <th>Status</th>
                 </tr>
             </thead>
@@ -241,7 +255,14 @@
                         <td class="fw-bold">{{ $country['risk_score'] }}</td>
                         <td>
                             <span class="badge-soft {{ $country['badge'] }}">
-                                {{ $country['category'] }}
+                                {{
+                                    [
+                                        'Low' => 'Rendah',
+                                        'Medium' => 'Sedang',
+                                        'High' => 'Tinggi',
+                                        'Critical' => 'Kritis'
+                                    ][$country['category']] ?? $country['category']
+                                }}
                             </span>
                         </td>
                     </tr>
@@ -251,24 +272,24 @@
     </div>
 
     <small class="text-muted">
-        Tabel ini menampilkan 25 negara pertama sebagai preview.
+        Tabel ini menampilkan 25 negara pertama sebagai pratinjau.
         Semua negara tetap diproses di controller.
     </small>
 </div>
 
-{{-- EXPLANATION --}}
+{{-- PENJELASAN --}}
 <div class="card sg-card p-4 mt-4">
-    <h5 class="fw-bold mb-3">Visualization Explanation</h5>
+    <h5 class="fw-bold mb-3">Penjelasan Visualisasi</h5>
 
     <p class="text-muted mb-2">
         Halaman ini digunakan untuk melihat pola risiko global secara visual.
-        Data divisualisasikan menggunakan Chart.js agar perbandingan antar negara
-        dan region lebih mudah dianalisis.
+        Data divisualisasikan menggunakan Chart.js agar perbandingan antarnegara
+        dan wilayah lebih mudah dianalisis.
     </p>
 
     <div class="alert alert-info mb-0">
-        Indikator visualisasi meliputi weather risk, currency risk, news risk,
-        port risk, inflation risk, dan total risk score.
+        Indikator visualisasi meliputi risiko cuaca, risiko mata uang,
+        risiko berita, risiko pelabuhan, risiko inflasi, dan total skor risiko.
     </div>
 </div>
 
@@ -306,7 +327,7 @@
                 return country.name;
             }),
             datasets: [{
-                label: 'Risk Score',
+                label: 'Skor Risiko',
                 data: topRiskCountries.map(function (country) {
                     return country.risk_score;
                 }),
@@ -329,7 +350,12 @@
     new Chart(document.getElementById('riskDistributionChart'), {
         type: 'doughnut',
         data: {
-            labels: ['Low', 'Medium', 'High', 'Critical'],
+            labels: [
+                'Risiko Rendah',
+                'Risiko Sedang',
+                'Risiko Tinggi',
+                'Risiko Kritis'
+            ],
             datasets: [{
                 data: [
                     riskSummary.low_risk,
@@ -352,7 +378,7 @@
                 return item.region;
             }),
             datasets: [{
-                label: 'Average Risk',
+                label: 'Rata-rata Risiko',
                 data: regionSummary.map(function (item) {
                     return item.average_risk;
                 }),
@@ -374,9 +400,15 @@
     new Chart(document.getElementById('indicatorChart'), {
         type: 'radar',
         data: {
-            labels: ['Weather', 'Currency', 'News', 'Port', 'Inflation'],
+            labels: [
+                'Cuaca',
+                'Mata Uang',
+                'Berita',
+                'Pelabuhan',
+                'Inflasi'
+            ],
             datasets: [{
-                label: 'Average Indicator Risk',
+                label: 'Rata-rata Indikator Risiko',
                 data: [
                     averageWeather,
                     averageCurrency,
