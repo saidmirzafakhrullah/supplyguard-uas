@@ -22,6 +22,13 @@ Route::get('/', function () {
 });
 
 Route::middleware(['auth'])->group(function () {
+
+    /*
+    |--------------------------------------------------------------------------
+    | Halaman Utama Pengguna
+    |--------------------------------------------------------------------------
+    */
+
     Route::get(
         '/dashboard',
         [DashboardController::class, 'index']
@@ -67,6 +74,12 @@ Route::middleware(['auth'])->group(function () {
         [ComparisonController::class, 'index']
     )->name('comparison.index');
 
+    /*
+    |--------------------------------------------------------------------------
+    | Daftar Pemantauan Favorit
+    |--------------------------------------------------------------------------
+    */
+
     Route::get(
         '/favorite-monitoring',
         [WatchlistController::class, 'index']
@@ -82,10 +95,23 @@ Route::middleware(['auth'])->group(function () {
         [WatchlistController::class, 'destroyByCountry']
     )->name('watchlist.destroy');
 
+    /*
+    |--------------------------------------------------------------------------
+    | Halaman Khusus Administrator
+    |--------------------------------------------------------------------------
+    */
+
     Route::prefix('admin')
         ->name('admin.')
         ->middleware('admin')
         ->group(function () {
+
+            /*
+            |--------------------------------------------------------------------------
+            | Manajemen Pengguna
+            |--------------------------------------------------------------------------
+            */
+
             Route::get(
                 '/users',
                 [AdminUserController::class, 'index']
@@ -100,6 +126,12 @@ Route::middleware(['auth'])->group(function () {
                 '/users/{user}',
                 [AdminUserController::class, 'destroy']
             )->name('users.destroy');
+
+            /*
+            |--------------------------------------------------------------------------
+            | Kelola Pelabuhan
+            |--------------------------------------------------------------------------
+            */
 
             Route::get(
                 '/ports',
@@ -121,15 +153,63 @@ Route::middleware(['auth'])->group(function () {
                 [AdminPortController::class, 'destroy']
             )->name('ports.destroy');
 
+            /*
+            |--------------------------------------------------------------------------
+            | Manajemen Artikel
+            |--------------------------------------------------------------------------
+            */
+
             Route::get(
                 '/articles',
                 [AdminArticleController::class, 'index']
             )->name('articles.index');
 
+            Route::post(
+                '/articles',
+                [AdminArticleController::class, 'store']
+            )->name('articles.store');
+
+            Route::put(
+                '/articles/{article}',
+                [AdminArticleController::class, 'update']
+            )->name('articles.update');
+
+            Route::delete(
+                '/articles/{article}',
+                [AdminArticleController::class, 'destroy']
+            )->name('articles.destroy');
+
+            /*
+            |--------------------------------------------------------------------------
+            | Kamus Kata Sentimen
+            |--------------------------------------------------------------------------
+            */
+
             Route::get(
                 '/words',
                 [AdminWordController::class, 'index']
             )->name('words.index');
+
+            Route::post(
+                '/words',
+                [AdminWordController::class, 'store']
+            )->name('words.store');
+
+            Route::put(
+                '/words/{word}',
+                [AdminWordController::class, 'update']
+            )->name('words.update');
+
+            Route::delete(
+                '/words/{word}',
+                [AdminWordController::class, 'destroy']
+            )->name('words.destroy');
+
+            /*
+            |--------------------------------------------------------------------------
+            | Log API
+            |--------------------------------------------------------------------------
+            */
 
             Route::get(
                 '/api-logs',

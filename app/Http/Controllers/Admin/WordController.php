@@ -3,136 +3,46 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\SentimentWord;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
+use Illuminate\View\View;
 
 class WordController extends Controller
 {
-    public function index()
+    /**
+     * Menampilkan halaman kamus kata sentimen.
+     */
+    public function index(Request $request): View
     {
-        $positiveWords = [
-            [
-                'id' => 1,
-                'word' => 'growth',
-                'category' => 'Economy',
-                'weight' => 2,
-                'meaning' => 'Menunjukkan pertumbuhan ekonomi atau perdagangan.',
-                'status' => 'Active',
-            ],
-            [
-                'id' => 2,
-                'word' => 'increase',
-                'category' => 'Trade',
-                'weight' => 1,
-                'meaning' => 'Menunjukkan kenaikan aktivitas perdagangan.',
-                'status' => 'Active',
-            ],
-            [
-                'id' => 3,
-                'word' => 'profit',
-                'category' => 'Business',
-                'weight' => 2,
-                'meaning' => 'Menunjukkan keuntungan bisnis.',
-                'status' => 'Active',
-            ],
-            [
-                'id' => 4,
-                'word' => 'stable',
-                'category' => 'Currency',
-                'weight' => 2,
-                'meaning' => 'Menunjukkan kondisi stabil.',
-                'status' => 'Active',
-            ],
-            [
-                'id' => 5,
-                'word' => 'improve',
-                'category' => 'Logistics',
-                'weight' => 1,
-                'meaning' => 'Menunjukkan perbaikan kondisi.',
-                'status' => 'Active',
-            ],
-            [
-                'id' => 6,
-                'word' => 'recovery',
-                'category' => 'Supply Chain',
-                'weight' => 2,
-                'meaning' => 'Menunjukkan pemulihan rantai pasok.',
-                'status' => 'Active',
-            ],
-            [
-                'id' => 7,
-                'word' => 'surplus',
-                'category' => 'Trade',
-                'weight' => 1,
-                'meaning' => 'Menunjukkan kelebihan atau keuntungan perdagangan.',
-                'status' => 'Active',
-            ],
-        ];
+        $search = trim((string) $request->query('search', ''));
 
-        $negativeWords = [
-            [
-                'id' => 1,
-                'word' => 'war',
-                'category' => 'Geopolitics',
-                'weight' => 3,
-                'meaning' => 'Menunjukkan konflik yang dapat mengganggu perdagangan.',
-                'status' => 'Active',
-            ],
-            [
-                'id' => 2,
-                'word' => 'crisis',
-                'category' => 'Economy',
-                'weight' => 3,
-                'meaning' => 'Menunjukkan kondisi krisis ekonomi atau logistik.',
-                'status' => 'Active',
-            ],
-            [
-                'id' => 3,
-                'word' => 'inflation',
-                'category' => 'Economy',
-                'weight' => 2,
-                'meaning' => 'Menunjukkan kenaikan harga dan biaya produksi.',
-                'status' => 'Active',
-            ],
-            [
-                'id' => 4,
-                'word' => 'delay',
-                'category' => 'Logistics',
-                'weight' => 2,
-                'meaning' => 'Menunjukkan keterlambatan pengiriman.',
-                'status' => 'Active',
-            ],
-            [
-                'id' => 5,
-                'word' => 'disaster',
-                'category' => 'Weather',
-                'weight' => 3,
-                'meaning' => 'Menunjukkan bencana yang mengganggu rantai pasok.',
-                'status' => 'Active',
-            ],
-            [
-                'id' => 6,
-                'word' => 'storm',
-                'category' => 'Weather',
-                'weight' => 2,
-                'meaning' => 'Menunjukkan cuaca ekstrem.',
-                'status' => 'Active',
-            ],
-            [
-                'id' => 7,
-                'word' => 'congestion',
-                'category' => 'Port',
-                'weight' => 2,
-                'meaning' => 'Menunjukkan kemacetan pelabuhan.',
-                'status' => 'Active',
-            ],
-            [
-                'id' => 8,
-                'word' => 'decrease',
-                'category' => 'Trade',
-                'weight' => 1,
-                'meaning' => 'Menunjukkan penurunan aktivitas perdagangan.',
-                'status' => 'Active',
-            ],
-        ];
+        $words = SentimentWord::query()
+            ->when($search !== '', function ($query) use ($search) {
+                $query->where(function ($subQuery) use ($search) {
+                    $subQuery
+                        ->where('word', 'like', "%{$search}%")
+                        ->orWhere('type', 'like', "%{$search}%")
+                        ->orWhere('category', 'like', "%{$search}%")
+                        ->orWhere('meaning', 'like', "%{$search}%")
+                        ->orWhere('status', 'like', "%{$search}%");
+                });
+            })
+            ->orderBy('type')
+            ->orderBy('word')
+            ->paginate(12)
+            ->withQueryString();
+
+        $positiveWords = SentimentWord::query()
+            ->where('type', 'positive')
+            ->where('status', 'active')
+            ->get();
+
+        $negativeWords = SentimentWord::query()
+            ->where('type', 'negative')
+            ->where('status', 'active')
+            ->get();
 
         $sampleText = 'Inflation increase while exports decrease due to war and port delay.';
 
@@ -143,31 +53,176 @@ class WordController extends Controller
         );
 
         $summary = [
-            'total_words' => count($positiveWords) + count($negativeWords),
-            'positive_words' => count($positiveWords),
-            'negative_words' => count($negativeWords),
+            'total_words' => SentimentWord::query()->count(),
+
+            'positive_words' => SentimentWord::query()
+                ->where('type', 'positive')
+                ->count(),
+
+            'negative_words' => SentimentWord::query()
+                ->where('type', 'negative')
+                ->count(),
+
+            'active_words' => SentimentWord::query()
+                ->where('status', 'active')
+                ->count(),
+
             'positive_score' => $analysis['positive_score'],
+
             'negative_score' => $analysis['negative_score'],
+
             'sentiment' => $analysis['sentiment'],
         ];
 
-        return view('admin.sentiment_words.index', compact(
-            'positiveWords',
-            'negativeWords',
-            'sampleText',
-            'analysis',
-            'summary'
-        ));
+        return view(
+            'admin.sentiment_words.index',
+            compact(
+                'words',
+                'summary',
+                'sampleText',
+                'analysis',
+                'search'
+            )
+        );
     }
 
-    private function analyzeSentiment($text, $positiveWords, $negativeWords)
+    /**
+     * Menambahkan kata sentimen.
+     */
+    public function store(Request $request): RedirectResponse
     {
+        $data = $this->validateWord($request);
+
+        $data['word'] = strtolower(trim($data['word']));
+
+        SentimentWord::query()->create($data);
+
+        return redirect()
+            ->route('admin.words.index')
+            ->with(
+                'success',
+                'Kata sentimen berhasil ditambahkan.'
+            );
+    }
+
+    /**
+     * Memperbarui kata sentimen.
+     */
+    public function update(
+        Request $request,
+        SentimentWord $word
+    ): RedirectResponse {
+        $data = $this->validateWord(
+            $request,
+            $word->id
+        );
+
+        $data['word'] = strtolower(trim($data['word']));
+
+        $word->update($data);
+
+        return redirect()
+            ->route('admin.words.index')
+            ->with(
+                'success',
+                'Kata sentimen berhasil diperbarui.'
+            );
+    }
+
+    /**
+     * Menghapus kata sentimen.
+     */
+    public function destroy(SentimentWord $word): RedirectResponse
+    {
+        $deletedWord = $word->word;
+
+        $word->delete();
+
+        return redirect()
+            ->route('admin.words.index')
+            ->with(
+                'success',
+                'Kata "' . $deletedWord . '" berhasil dihapus.'
+            );
+    }
+
+    /**
+     * Validasi data kata sentimen.
+     */
+    private function validateWord(
+        Request $request,
+        ?int $ignoreId = null
+    ): array {
+        return $request->validate([
+            'word' => [
+                'required',
+                'string',
+                'max:100',
+                Rule::unique('sentiment_words', 'word')
+                    ->ignore($ignoreId),
+            ],
+
+            'type' => [
+                'required',
+                Rule::in([
+                    'positive',
+                    'negative',
+                ]),
+            ],
+
+            'category' => [
+                'nullable',
+                'string',
+                'max:100',
+            ],
+
+            'weight' => [
+                'required',
+                'integer',
+                'min:1',
+                'max:5',
+            ],
+
+            'meaning' => [
+                'nullable',
+                'string',
+                'max:1000',
+            ],
+
+            'status' => [
+                'required',
+                Rule::in([
+                    'active',
+                    'inactive',
+                ]),
+            ],
+        ], [
+            'word.required' => 'Kata wajib diisi.',
+            'word.unique' => 'Kata tersebut sudah ada dalam kamus.',
+            'type.required' => 'Jenis kata wajib dipilih.',
+            'weight.required' => 'Bobot kata wajib diisi.',
+            'weight.min' => 'Bobot minimal 1.',
+            'weight.max' => 'Bobot maksimal 5.',
+        ]);
+    }
+
+    /**
+     * Analisis sentimen sederhana berbasis kamus.
+     */
+    private function analyzeSentiment(
+        string $text,
+        $positiveWords,
+        $negativeWords
+    ): array {
         $cleanText = strtolower($text);
         $cleanText = preg_replace('/[^a-zA-Z\s]/', '', $cleanText);
-        $words = explode(' ', $cleanText);
+        $textWords = array_filter(explode(' ', $cleanText));
 
-        $positiveDictionary = collect($positiveWords)->pluck('word')->toArray();
-        $negativeDictionary = collect($negativeWords)->pluck('word')->toArray();
+        $positiveDictionary = $positiveWords
+            ->keyBy('word');
+
+        $negativeDictionary = $negativeWords
+            ->keyBy('word');
 
         $positiveMatches = [];
         $negativeMatches = [];
@@ -175,15 +230,19 @@ class WordController extends Controller
         $positiveScore = 0;
         $negativeScore = 0;
 
-        foreach ($words as $word) {
-            if (in_array($word, $positiveDictionary)) {
-                $positiveMatches[] = $word;
-                $positiveScore++;
+        foreach ($textWords as $textWord) {
+            if ($positiveDictionary->has($textWord)) {
+                $item = $positiveDictionary->get($textWord);
+
+                $positiveMatches[] = $textWord;
+                $positiveScore += (int) $item->weight;
             }
 
-            if (in_array($word, $negativeDictionary)) {
-                $negativeMatches[] = $word;
-                $negativeScore++;
+            if ($negativeDictionary->has($textWord)) {
+                $item = $negativeDictionary->get($textWord);
+
+                $negativeMatches[] = $textWord;
+                $negativeScore += (int) $item->weight;
             }
         }
 
@@ -191,15 +250,17 @@ class WordController extends Controller
 
         if ($positiveScore > $negativeScore) {
             $sentiment = 'Positive';
-        } elseif ($negativeScore > $positiveScore) {
+        }
+
+        if ($negativeScore > $positiveScore) {
             $sentiment = 'Negative';
         }
 
         return [
             'positive_score' => $positiveScore,
             'negative_score' => $negativeScore,
-            'positive_matches' => $positiveMatches,
-            'negative_matches' => $negativeMatches,
+            'positive_matches' => array_values(array_unique($positiveMatches)),
+            'negative_matches' => array_values(array_unique($negativeMatches)),
             'sentiment' => $sentiment,
         ];
     }

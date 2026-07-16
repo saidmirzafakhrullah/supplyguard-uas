@@ -29,6 +29,7 @@ class SupplyGuardApiController extends Controller
             'meta' => [
                 'total' => count($countries),
                 'source' => 'REST Countries API v5',
+                'note' => 'Data hanya menampilkan negara dengan kode ISO Alpha-3 yang valid.',
                 'generated_at' => now()->toISOString(),
             ],
         ]);
@@ -114,7 +115,7 @@ class SupplyGuardApiController extends Controller
             'meta' => [
                 'total' => count($data),
                 'method' => 'Lexicon Based Sentiment Analysis',
-                'source' => 'Simulasi internal',
+                'source' => 'Simulasi internal SupplyGuard',
                 'generated_at' => now()->toISOString(),
             ],
         ]);
@@ -156,7 +157,7 @@ class SupplyGuardApiController extends Controller
     private function getCountries(): array
     {
         return Cache::remember(
-            'supplyguard.api.countries.v5',
+            'supplyguard.api.countries.v6.cleaned',
             now()->addHours(12),
             function () {
                 $startedAt = microtime(true);
@@ -231,6 +232,9 @@ class SupplyGuardApiController extends Controller
                         $more = (bool) ($meta['more'] ?? false);
                         $offset += $limit;
 
+                        /*
+                         * Pengaman agar looping tidak berjalan tanpa batas.
+                         */
                         if ($offset > 500) {
                             break;
                         }
@@ -295,24 +299,42 @@ class SupplyGuardApiController extends Controller
                                 }
                             }
 
+                            $countryCode = strtoupper(
+                                trim(
+                                    (string) data_get(
+                                        $item,
+                                        'codes.alpha_3',
+                                        ''
+                                    )
+                                )
+                            );
+
+                            $currencyCode = strtoupper(
+                                trim($currencyCode)
+                            );
+
+                            if ($currencyCode === '') {
+                                $currencyCode = 'USD';
+                            }
+
                             return [
-                                'name' => data_get(
-                                    $item,
-                                    'names.common',
-                                    'Unknown'
+                                'name' => trim(
+                                    (string) data_get(
+                                        $item,
+                                        'names.common',
+                                        'Unknown'
+                                    )
                                 ),
 
-                                'official_name' => data_get(
-                                    $item,
-                                    'names.official',
-                                    'Unknown'
+                                'official_name' => trim(
+                                    (string) data_get(
+                                        $item,
+                                        'names.official',
+                                        'Unknown'
+                                    )
                                 ),
 
-                                'code' => data_get(
-                                    $item,
-                                    'codes.alpha_3',
-                                    '-'
-                                ),
+                                'code' => $countryCode,
 
                                 'capital' => data_get(
                                     $item,
@@ -339,6 +361,7 @@ class SupplyGuardApiController extends Controller
                                 ),
 
                                 'currency_code' => $currencyCode,
+
                                 'currency_name' => $currencyName,
 
                                 'latitude' => (float) data_get(
@@ -369,16 +392,16 @@ class SupplyGuardApiController extends Controller
                             ];
                         })
                         ->filter(function (array $country) {
-                            return $country['name'] !== 'Unknown'
-                                && $country['code'] !== '-';
+                            return $this->isValidCountry($country);
                         })
+                        ->unique('code')
                         ->sortBy('name')
                         ->values()
                         ->all();
 
                     if (empty($countries)) {
                         throw new \RuntimeException(
-                            'REST Countries API tidak mengembalikan data negara.'
+                            'REST Countries API tidak mengembalikan data negara yang valid.'
                         );
                     }
 
@@ -394,7 +417,7 @@ class SupplyGuardApiController extends Controller
                         responseTime: $responseTime,
                         description: 'Berhasil mengambil '
                             . count($countries)
-                            . ' data negara dari REST Countries API v5.'
+                            . ' data negara valid dari REST Countries API v5.'
                     );
 
                     return $countries;
@@ -422,14 +445,52 @@ class SupplyGuardApiController extends Controller
     }
 
     /**
-     * Menyaring negara berdasarkan nama atau kode.
+     * Memastikan data negara valid untuk ditampilkan
+     * di REST API SupplyGuard.
+     */
+    private function isValidCountry(array $country): bool
+    {
+        $name = trim((string) ($country['name'] ?? ''));
+        $code = trim((string) ($country['code'] ?? ''));
+        $region = trim((string) ($country['region'] ?? ''));
+
+        if (
+            $name === ''
+            || $name === 'Unknown'
+            || $code === ''
+            || $code === '-'
+            || $region === ''
+            || $region === '-'
+        ) {
+            return false;
+        }
+
+        /*
+         * Supaya negara seperti Abkhazia yang kode negaranya kosong
+         * tidak muncul pada output API.
+         */
+        if (!preg_match('/^[A-Z]{3}$/', $code)) {
+            return false;
+        }
+
+        return true;
+    }
+
+    /**
+     * Menyaring negara berdasarkan nama, kode, wilayah,
+     * ibu kota, atau mata uang.
      */
     private function filterCountries(
         array $countries,
         ?string $keyword
     ): array {
+        $countries = array_values(array_filter(
+            $countries,
+            fn (array $country) => $this->isValidCountry($country)
+        ));
+
         if ($keyword === null || trim($keyword) === '') {
-            return array_values($countries);
+            return $countries;
         }
 
         $keyword = strtolower(trim($keyword));
@@ -437,13 +498,25 @@ class SupplyGuardApiController extends Controller
         return array_values(array_filter(
             $countries,
             function (array $country) use ($keyword) {
-                return str_contains(
-                    strtolower($country['name']),
-                    $keyword
-                ) || str_contains(
-                    strtolower($country['code']),
-                    $keyword
+                $searchableText = strtolower(
+                    ($country['name'] ?? '')
+                    . ' '
+                    . ($country['official_name'] ?? '')
+                    . ' '
+                    . ($country['code'] ?? '')
+                    . ' '
+                    . ($country['capital'] ?? '')
+                    . ' '
+                    . ($country['region'] ?? '')
+                    . ' '
+                    . ($country['subregion'] ?? '')
+                    . ' '
+                    . ($country['currency_code'] ?? '')
+                    . ' '
+                    . ($country['currency_name'] ?? '')
                 );
+
+                return str_contains($searchableText, $keyword);
             }
         ));
     }
@@ -482,6 +555,7 @@ class SupplyGuardApiController extends Controller
                 'region' => $country['region'],
                 'flag' => $country['flag'],
             ],
+
             'indicators' => [
                 'weather_risk' => $weatherRisk,
                 'inflation_risk' => $inflationRisk,
@@ -489,6 +563,7 @@ class SupplyGuardApiController extends Controller
                 'news_risk' => $newsRisk,
                 'port_risk' => $portRisk,
             ],
+
             'total_risk' => $totalRisk,
             'category' => $riskInfo['category'],
             'recommendation' => $riskInfo['recommendation'],
@@ -676,7 +751,10 @@ class SupplyGuardApiController extends Controller
         array $rates
     ): array {
         $currencyCode = $country['currency_code'];
-        $exchangeRate = $rates[$currencyCode] ?? 1;
+
+        $exchangeRate = is_numeric($rates[$currencyCode] ?? null)
+            ? (float) $rates[$currencyCode]
+            : 1.0;
 
         $seed = abs(crc32($country['code']));
 
@@ -872,8 +950,7 @@ class SupplyGuardApiController extends Controller
             ],
             [
                 'name' => 'Germany',
-                'official_name' =>
-                    'Federal Republic of Germany',
+                'official_name' => 'Federal Republic of Germany',
                 'code' => 'DEU',
                 'capital' => 'Berlin',
                 'region' => 'Europe',
@@ -888,8 +965,7 @@ class SupplyGuardApiController extends Controller
             ],
             [
                 'name' => 'United States',
-                'official_name' =>
-                    'United States of America',
+                'official_name' => 'United States of America',
                 'code' => 'USA',
                 'capital' => 'Washington, D.C.',
                 'region' => 'Americas',

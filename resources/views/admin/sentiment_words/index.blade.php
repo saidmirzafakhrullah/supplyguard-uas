@@ -1,497 +1,499 @@
 @extends('layouts.app')
 
-@section('title', 'Kata Sentimen - SupplyGuard')
+@section('title', 'Kamus Kata Sentimen - SupplyGuard')
 @section('page-title', 'Manajemen Admin - Kata Sentimen')
 
 @section('content')
 
-{{-- BAGIAN JUDUL --}}
+@php
+    $typeLabels = [
+        'positive' => 'Positif',
+        'negative' => 'Negatif',
+    ];
+
+    $typeClasses = [
+        'positive' => 'bg-success',
+        'negative' => 'bg-danger',
+    ];
+
+    $statusLabels = [
+        'active' => 'Aktif',
+        'inactive' => 'Tidak Aktif',
+    ];
+
+    $statusClasses = [
+        'active' => 'bg-success',
+        'inactive' => 'bg-secondary',
+    ];
+
+    $sentimentClasses = [
+        'Positive' => 'bg-success',
+        'Neutral' => 'bg-secondary',
+        'Negative' => 'bg-danger',
+    ];
+
+    $sentimentLabels = [
+        'Positive' => 'Positif',
+        'Neutral' => 'Netral',
+        'Negative' => 'Negatif',
+    ];
+@endphp
+
+@if(session('success'))
+    <div class="alert alert-success alert-dismissible fade show">
+        <i class="bi bi-check-circle-fill me-2"></i>
+        {{ session('success') }}
+
+        <button
+            type="button"
+            class="btn-close"
+            data-bs-dismiss="alert"
+        ></button>
+    </div>
+@endif
+
+@if($errors->any())
+    <div class="alert alert-danger alert-dismissible fade show">
+        <i class="bi bi-exclamation-triangle-fill me-2"></i>
+        {{ $errors->first() }}
+
+        <button
+            type="button"
+            class="btn-close"
+            data-bs-dismiss="alert"
+        ></button>
+    </div>
+@endif
+
 <div class="card sg-card p-4 mb-4">
-    <div class="d-flex justify-content-between align-items-center">
+    <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-3">
         <div>
-            <h4 class="fw-bold mb-1">Manajemen Kata Sentimen</h4>
+            <h4 class="fw-bold mb-1">
+                Kamus Kata Sentimen
+            </h4>
+
             <p class="text-muted mb-0">
-                Halaman admin untuk memantau kamus kata positif dan negatif
-                yang digunakan dalam Analisis Sentimen Berbasis Leksikon.
+                Kelola kata positif dan negatif yang digunakan untuk analisis sentimen berita rantai pasok.
             </p>
         </div>
 
-        <span class="badge bg-primary">Berbasis Leksikon</span>
+        <button
+            type="button"
+            class="btn btn-primary"
+            data-bs-toggle="modal"
+            data-bs-target="#addWordModal"
+        >
+            <i class="bi bi-plus-lg me-1"></i>
+            Tambah Kata
+        </button>
     </div>
 </div>
 
-{{-- RINGKASAN --}}
-<div class="row g-4">
-    <div class="col-md-2">
-        <div class="card sg-card p-4">
+<div class="row g-4 mb-4">
+    <div class="col-sm-6 col-xl-3">
+        <div class="card sg-card p-4 h-100">
             <small class="text-muted">Total Kata</small>
-            <h3 class="fw-bold">{{ $summary['total_words'] }}</h3>
-            <span class="badge bg-primary">Kamus</span>
-        </div>
-    </div>
-
-    <div class="col-md-2">
-        <div class="card sg-card p-4">
-            <small class="text-muted">Kata Positif</small>
-            <h3 class="fw-bold text-success">{{ $summary['positive_words'] }}</h3>
-            <span class="badge bg-success">Positif</span>
-        </div>
-    </div>
-
-    <div class="col-md-2">
-        <div class="card sg-card p-4">
-            <small class="text-muted">Kata Negatif</small>
-            <h3 class="fw-bold text-danger">{{ $summary['negative_words'] }}</h3>
-            <span class="badge bg-danger">Negatif</span>
-        </div>
-    </div>
-
-    <div class="col-md-2">
-        <div class="card sg-card p-4">
-            <small class="text-muted">Skor Positif</small>
-            <h3 class="fw-bold text-success">{{ $summary['positive_score'] }}</h3>
-            <span class="badge bg-success">Skor</span>
-        </div>
-    </div>
-
-    <div class="col-md-2">
-        <div class="card sg-card p-4">
-            <small class="text-muted">Skor Negatif</small>
-            <h3 class="fw-bold text-danger">{{ $summary['negative_score'] }}</h3>
-            <span class="badge bg-danger">Skor</span>
-        </div>
-    </div>
-
-    <div class="col-md-2">
-        <div class="card sg-card p-4">
-            <small class="text-muted">Hasil</small>
-
-            <h3 class="fw-bold">
-                {{
-                    [
-                        'Positive' => 'Positif',
-                        'Negative' => 'Negatif',
-                        'Neutral' => 'Netral'
-                    ][$summary['sentiment']] ?? $summary['sentiment']
-                }}
+            <h3 class="fw-bold mb-1">
+                {{ $summary['total_words'] }}
             </h3>
+            <span class="text-primary small">
+                Seluruh kamus
+            </span>
+        </div>
+    </div>
 
-            @if($summary['sentiment'] === 'Positive')
-                <span class="badge bg-success">Positif</span>
-            @elseif($summary['sentiment'] === 'Negative')
-                <span class="badge bg-danger">Negatif</span>
-            @else
-                <span class="badge bg-primary">Netral</span>
-            @endif
+    <div class="col-sm-6 col-xl-3">
+        <div class="card sg-card p-4 h-100">
+            <small class="text-muted">Kata Positif</small>
+            <h3 class="fw-bold text-success mb-1">
+                {{ $summary['positive_words'] }}
+            </h3>
+            <span class="text-success small">
+                Mendukung sentimen baik
+            </span>
+        </div>
+    </div>
+
+    <div class="col-sm-6 col-xl-3">
+        <div class="card sg-card p-4 h-100">
+            <small class="text-muted">Kata Negatif</small>
+            <h3 class="fw-bold text-danger mb-1">
+                {{ $summary['negative_words'] }}
+            </h3>
+            <span class="text-danger small">
+                Menunjukkan risiko
+            </span>
+        </div>
+    </div>
+
+    <div class="col-sm-6 col-xl-3">
+        <div class="card sg-card p-4 h-100">
+            <small class="text-muted">Kata Aktif</small>
+            <h3 class="fw-bold text-primary mb-1">
+                {{ $summary['active_words'] }}
+            </h3>
+            <span class="text-primary small">
+                Digunakan analisis
+            </span>
         </div>
     </div>
 </div>
 
-{{-- GRAFIK DAN CONTOH ANALISIS --}}
-<div class="row g-4 mt-1">
+<div class="row g-4 mb-4">
     <div class="col-lg-5">
-        <div class="card sg-card p-4">
-            <h5 class="fw-bold mb-1">Distribusi Kamus Kata</h5>
+        <div class="card sg-card p-4 h-100">
+            <h5 class="fw-bold mb-2">
+                Simulasi Analisis Sentimen
+            </h5>
 
-            <small class="text-muted">
-                Perbandingan jumlah kata positif dan negatif.
-            </small>
+            <p class="text-muted mb-3">
+                Contoh kalimat dianalisis menggunakan kamus kata aktif.
+            </p>
 
-            <div class="mt-3" style="height: 300px;">
-                <canvas id="wordDistributionChart"></canvas>
+            <div class="alert alert-light border">
+                <strong>Teks Contoh:</strong><br>
+                {{ $sampleText }}
             </div>
+
+            <table class="table align-middle mb-0">
+                <tbody>
+                    <tr>
+                        <td>Skor Positif</td>
+                        <td class="text-end fw-bold text-success">
+                            {{ $analysis['positive_score'] }}
+                        </td>
+                    </tr>
+
+                    <tr>
+                        <td>Skor Negatif</td>
+                        <td class="text-end fw-bold text-danger">
+                            {{ $analysis['negative_score'] }}
+                        </td>
+                    </tr>
+
+                    <tr>
+                        <td>Kata Positif Terdeteksi</td>
+                        <td class="text-end">
+                            @forelse($analysis['positive_matches'] as $word)
+                                <span class="badge bg-success">
+                                    {{ $word }}
+                                </span>
+                            @empty
+                                <span class="text-muted">-</span>
+                            @endforelse
+                        </td>
+                    </tr>
+
+                    <tr>
+                        <td>Kata Negatif Terdeteksi</td>
+                        <td class="text-end">
+                            @forelse($analysis['negative_matches'] as $word)
+                                <span class="badge bg-danger">
+                                    {{ $word }}
+                                </span>
+                            @empty
+                                <span class="text-muted">-</span>
+                            @endforelse
+                        </td>
+                    </tr>
+
+                    <tr>
+                        <td>Hasil Sentimen</td>
+                        <td class="text-end">
+                            <span class="badge {{ $sentimentClasses[$analysis['sentiment']] ?? 'bg-secondary' }}">
+                                {{
+                                    $sentimentLabels[$analysis['sentiment']]
+                                    ?? $analysis['sentiment']
+                                }}
+                            </span>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
         </div>
     </div>
 
     <div class="col-lg-7">
-        <div class="card sg-card p-4">
-            <h5 class="fw-bold mb-3">Contoh Analisis Sentimen</h5>
+        <div class="card sg-card p-4 h-100">
+            <h5 class="fw-bold mb-2">
+                Penjelasan Kamus Sentimen
+            </h5>
 
-            <div class="alert alert-light border">
-                <small class="text-muted">Contoh Teks</small>
+            <p class="text-muted mb-3">
+                Fitur ini mendukung kebutuhan tugas pada bagian
+                <strong>Lexicon Based Sentiment Analysis</strong>.
+                Sistem menghitung jumlah kata positif dan negatif dari berita,
+                lalu menentukan hasil sentimen.
+            </p>
 
-                <div class="fw-bold mt-1">
-                    "{{ $sampleText }}"
-                </div>
-            </div>
-
-            <div class="row g-3">
-                <div class="col-md-6">
-                    <div class="border rounded p-3">
-                        <small class="text-muted">Kata Positif yang Ditemukan</small>
-
-                        <div class="mt-2">
-                            @forelse($analysis['positive_matches'] as $word)
-                                <span class="badge bg-success me-1">
-                                    {{ $word }}
-                                </span>
-                            @empty
-                                <span class="text-muted">
-                                    Tidak ada kata positif
-                                </span>
-                            @endforelse
-                        </div>
-                    </div>
-                </div>
-
-                <div class="col-md-6">
-                    <div class="border rounded p-3">
-                        <small class="text-muted">Kata Negatif yang Ditemukan</small>
-
-                        <div class="mt-2">
-                            @forelse($analysis['negative_matches'] as $word)
-                                <span class="badge bg-danger me-1">
-                                    {{ $word }}
-                                </span>
-                            @empty
-                                <span class="text-muted">
-                                    Tidak ada kata negatif
-                                </span>
-                            @endforelse
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="mt-3">
-                @if($analysis['sentiment'] === 'Positive')
-                    <div class="alert alert-success mb-0">
-                        Hasil analisis: <b>Sentimen Positif</b>.
-                        Berita cenderung aman untuk rantai pasok.
-                    </div>
-                @elseif($analysis['sentiment'] === 'Negative')
-                    <div class="alert alert-danger mb-0">
-                        Hasil analisis: <b>Sentimen Negatif</b>.
-                        Berita berpotensi meningkatkan risiko rantai pasok.
-                    </div>
-                @else
-                    <div class="alert alert-primary mb-0">
-                        Hasil analisis: <b>Sentimen Netral</b>.
-                        Berita belum menunjukkan kecenderungan positif atau negatif.
-                    </div>
-                @endif
+            <div class="alert alert-info mb-0">
+                Kata dengan status <strong>Aktif</strong> digunakan dalam
+                simulasi analisis. Bobot kata menentukan seberapa besar
+                pengaruh kata tersebut terhadap hasil sentimen.
             </div>
         </div>
     </div>
 </div>
 
-{{-- KAMUS KATA --}}
-<div class="row g-4 mt-1">
-    <div class="col-lg-6">
-        <div class="card sg-card p-4">
-            <div class="d-flex justify-content-between align-items-center mb-3">
-                <div>
-                    <h5 class="fw-bold mb-1">Kamus Kata Positif</h5>
+<div class="card sg-card p-4">
+    <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-3 mb-3">
+        <div>
+            <h5 class="fw-bold mb-1">
+                Daftar Kata Sentimen
+            </h5>
 
-                    <small class="text-muted">
-                        Kamus kata yang menunjukkan sentimen positif.
-                    </small>
+            <small class="text-muted">
+                Data kata tersimpan pada tabel sentiment_words.
+            </small>
+        </div>
+
+        <form
+            method="GET"
+            action="{{ route('admin.words.index') }}"
+            class="d-flex gap-2"
+        >
+            <input
+                type="text"
+                name="search"
+                class="form-control"
+                value="{{ $search }}"
+                placeholder="Cari kata..."
+                style="width: 280px; max-width: 100%;"
+            >
+
+            <button class="btn btn-outline-primary">
+                <i class="bi bi-search"></i>
+            </button>
+
+            @if($search !== '')
+                <a
+                    href="{{ route('admin.words.index') }}"
+                    class="btn btn-outline-secondary"
+                >
+                    Reset
+                </a>
+            @endif
+        </form>
+    </div>
+
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+            <thead>
+                <tr>
+                    <th>No</th>
+                    <th>Kata</th>
+                    <th>Jenis</th>
+                    <th>Kategori</th>
+                    <th>Bobot</th>
+                    <th>Makna</th>
+                    <th>Status</th>
+                    <th class="text-center">Aksi</th>
+                </tr>
+            </thead>
+
+            <tbody>
+                @forelse($words as $index => $word)
+                    <tr>
+                        <td>
+                            {{ $words->firstItem() + $index }}
+                        </td>
+
+                        <td class="fw-bold">
+                            {{ $word->word }}
+                        </td>
+
+                        <td>
+                            <span class="badge {{ $typeClasses[$word->type] ?? 'bg-secondary' }}">
+                                {{ $typeLabels[$word->type] ?? $word->type }}
+                            </span>
+                        </td>
+
+                        <td>
+                            {{ $word->category ?: '-' }}
+                        </td>
+
+                        <td>
+                            <span class="badge bg-primary">
+                                {{ $word->weight }}
+                            </span>
+                        </td>
+
+                        <td style="min-width: 260px;">
+                            <small>
+                                {{ $word->meaning ?: '-' }}
+                            </small>
+                        </td>
+
+                        <td>
+                            <span class="badge {{ $statusClasses[$word->status] ?? 'bg-secondary' }}">
+                                {{ $statusLabels[$word->status] ?? $word->status }}
+                            </span>
+                        </td>
+
+                        <td>
+                            <div class="d-flex justify-content-center gap-2">
+                                <button
+                                    type="button"
+                                    class="btn btn-sm btn-outline-primary"
+                                    data-bs-toggle="modal"
+                                    data-bs-target="#editWordModal{{ $word->id }}"
+                                    title="Edit kata"
+                                >
+                                    <i class="bi bi-pencil-square"></i>
+                                </button>
+
+                                <form
+                                    method="POST"
+                                    action="{{ route('admin.words.destroy', $word) }}"
+                                    onsubmit="return confirm('Hapus kata {{ addslashes($word->word) }}?')"
+                                >
+                                    @csrf
+                                    @method('DELETE')
+
+                                    <button
+                                        type="submit"
+                                        class="btn btn-sm btn-outline-danger"
+                                        title="Hapus kata"
+                                    >
+                                        <i class="bi bi-trash3"></i>
+                                    </button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                @empty
+                    <tr>
+                        <td
+                            colspan="8"
+                            class="text-center text-muted py-5"
+                        >
+                            <i class="bi bi-chat-square-text fs-2 d-block mb-2"></i>
+                            Belum ada kata sentimen.
+                        </td>
+                    </tr>
+                @endforelse
+            </tbody>
+        </table>
+    </div>
+
+    @if($words->hasPages())
+        <div class="mt-4">
+            {{
+                $words
+                    ->onEachSide(1)
+                    ->links('pagination::bootstrap-5')
+            }}
+        </div>
+    @endif
+</div>
+
+<div
+    class="modal fade"
+    id="addWordModal"
+    tabindex="-1"
+>
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <div class="modal-content">
+            <form
+                method="POST"
+                action="{{ route('admin.words.store') }}"
+            >
+                @csrf
+
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        Tambah Kata Sentimen
+                    </h5>
+
+                    <button
+                        type="button"
+                        class="btn-close"
+                        data-bs-dismiss="modal"
+                    ></button>
                 </div>
 
-                <div style="width: 220px;">
-                    <input
-                        type="text"
-                        id="positiveSearch"
-                        class="form-control"
-                        placeholder="Cari kata positif..."
+                <div class="modal-body">
+                    @include(
+                        'admin.sentiment_words.partials.form',
+                        ['word' => null]
+                    )
+                </div>
+
+                <div class="modal-footer">
+                    <button
+                        type="button"
+                        class="btn btn-light"
+                        data-bs-dismiss="modal"
                     >
-                </div>
-            </div>
+                        Batal
+                    </button>
 
-            <div class="table-responsive">
-                <table class="table align-middle">
-                    <thead>
-                        <tr>
-                            <th>No</th>
-                            <th>Kata</th>
-                            <th>Kategori</th>
-                            <th>Bobot</th>
-                            <th>Status</th>
-                        </tr>
-                    </thead>
-
-                    <tbody>
-                        @foreach($positiveWords as $index => $word)
-                            <tr
-                                class="positive-row"
-                                data-search="{{ strtolower($word['word'] . ' ' . $word['category'] . ' ' . $word['meaning']) }}"
-                            >
-                                <td>{{ $index + 1 }}</td>
-
-                                <td class="fw-bold text-success">
-                                    {{ $word['word'] }}
-                                </td>
-
-                                <td>
-                                    {{
-                                        [
-                                            'Logistics' => 'Logistik',
-                                            'Economy' => 'Ekonomi',
-                                            'Trade' => 'Perdagangan',
-                                            'Shipping' => 'Pengiriman',
-                                            'Weather' => 'Cuaca',
-                                            'Currency' => 'Mata Uang',
-                                            'Port' => 'Pelabuhan',
-                                            'Supply Chain' => 'Rantai Pasok',
-                                            'General' => 'Umum'
-                                        ][$word['category']] ?? $word['category']
-                                    }}
-                                </td>
-
-                                <td>{{ $word['weight'] }}</td>
-
-                                <td>
-                                    <span class="badge bg-success">
-                                        {{
-                                            [
-                                                'Active' => 'Aktif',
-                                                'Inactive' => 'Tidak Aktif'
-                                            ][$word['status']] ?? $word['status']
-                                        }}
-                                    </span>
-                                </td>
-                            </tr>
-
-                            <tr class="positive-row-detail">
-                                <td></td>
-
-                                <td colspan="4">
-                                    <small class="text-muted">
-                                        {{ $word['meaning'] }}
-                                    </small>
-                                </td>
-                            </tr>
-                        @endforeach
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    </div>
-
-    <div class="col-lg-6">
-        <div class="card sg-card p-4">
-            <div class="d-flex justify-content-between align-items-center mb-3">
-                <div>
-                    <h5 class="fw-bold mb-1">Kamus Kata Negatif</h5>
-
-                    <small class="text-muted">
-                        Kamus kata yang menunjukkan sentimen negatif.
-                    </small>
-                </div>
-
-                <div style="width: 220px;">
-                    <input
-                        type="text"
-                        id="negativeSearch"
-                        class="form-control"
-                        placeholder="Cari kata negatif..."
+                    <button
+                        type="submit"
+                        class="btn btn-primary"
                     >
+                        Tambahkan Kata
+                    </button>
                 </div>
-            </div>
-
-            <div class="table-responsive">
-                <table class="table align-middle">
-                    <thead>
-                        <tr>
-                            <th>No</th>
-                            <th>Kata</th>
-                            <th>Kategori</th>
-                            <th>Bobot</th>
-                            <th>Status</th>
-                        </tr>
-                    </thead>
-
-                    <tbody>
-                        @foreach($negativeWords as $index => $word)
-                            <tr
-                                class="negative-row"
-                                data-search="{{ strtolower($word['word'] . ' ' . $word['category'] . ' ' . $word['meaning']) }}"
-                            >
-                                <td>{{ $index + 1 }}</td>
-
-                                <td class="fw-bold text-danger">
-                                    {{ $word['word'] }}
-                                </td>
-
-                                <td>
-                                    {{
-                                        [
-                                            'Logistics' => 'Logistik',
-                                            'Economy' => 'Ekonomi',
-                                            'Trade' => 'Perdagangan',
-                                            'Shipping' => 'Pengiriman',
-                                            'Weather' => 'Cuaca',
-                                            'Currency' => 'Mata Uang',
-                                            'Port' => 'Pelabuhan',
-                                            'Supply Chain' => 'Rantai Pasok',
-                                            'General' => 'Umum'
-                                        ][$word['category']] ?? $word['category']
-                                    }}
-                                </td>
-
-                                <td>{{ $word['weight'] }}</td>
-
-                                <td>
-                                    <span class="badge bg-danger">
-                                        {{
-                                            [
-                                                'Active' => 'Aktif',
-                                                'Inactive' => 'Tidak Aktif'
-                                            ][$word['status']] ?? $word['status']
-                                        }}
-                                    </span>
-                                </td>
-                            </tr>
-
-                            <tr class="negative-row-detail">
-                                <td></td>
-
-                                <td colspan="4">
-                                    <small class="text-muted">
-                                        {{ $word['meaning'] }}
-                                    </small>
-                                </td>
-                            </tr>
-                        @endforeach
-                    </tbody>
-                </table>
-            </div>
+            </form>
         </div>
     </div>
 </div>
 
-{{-- RUMUS SENTIMEN --}}
-<div class="card sg-card p-4 mt-4">
-    <h5 class="fw-bold mb-3">Rumus Sentimen Berbasis Leksikon</h5>
+@foreach($words as $word)
+    <div
+        class="modal fade"
+        id="editWordModal{{ $word->id }}"
+        tabindex="-1"
+    >
+        <div class="modal-dialog modal-lg modal-dialog-scrollable">
+            <div class="modal-content">
+                <form
+                    method="POST"
+                    action="{{ route('admin.words.update', $word) }}"
+                >
+                    @csrf
+                    @method('PUT')
 
-    <div class="row g-4">
-        <div class="col-md-4">
-            <div class="border rounded p-3 h-100">
-                <h6 class="fw-bold">1. Pembersihan Teks</h6>
+                    <div class="modal-header">
+                        <h5 class="modal-title">
+                            Edit Kata Sentimen
+                        </h5>
 
-                <p class="text-muted mb-0">
-                    Sistem mengubah teks menjadi huruf kecil dan menghapus tanda baca.
-                </p>
-            </div>
-        </div>
+                        <button
+                            type="button"
+                            class="btn-close"
+                            data-bs-dismiss="modal"
+                        ></button>
+                    </div>
 
-        <div class="col-md-4">
-            <div class="border rounded p-3 h-100">
-                <h6 class="fw-bold">2. Pencocokan Kata</h6>
+                    <div class="modal-body">
+                        @include(
+                            'admin.sentiment_words.partials.form',
+                            ['word' => $word]
+                        )
+                    </div>
 
-                <p class="text-muted mb-0">
-                    Setiap kata dicocokkan dengan kamus
-                    <b>positive_words</b> dan <b>negative_words</b>.
-                </p>
-            </div>
-        </div>
+                    <div class="modal-footer">
+                        <button
+                            type="button"
+                            class="btn btn-light"
+                            data-bs-dismiss="modal"
+                        >
+                            Batal
+                        </button>
 
-        <div class="col-md-4">
-            <div class="border rounded p-3 h-100">
-                <h6 class="fw-bold">3. Hasil Sentimen</h6>
-
-                <p class="text-muted mb-0">
-                    Jika skor negatif lebih tinggi, berita dianggap berisiko
-                    untuk rantai pasok.
-                </p>
+                        <button
+                            type="submit"
+                            class="btn btn-primary"
+                        >
+                            Simpan Perubahan
+                        </button>
+                    </div>
+                </form>
             </div>
         </div>
     </div>
-
-    <div class="alert alert-info mt-4 mb-0">
-        Rumus sederhana:
-        <b>Skor Positif</b> dibandingkan dengan <b>Skor Negatif</b>.
-        Jika Skor Negatif lebih besar, hasilnya adalah Sentimen Negatif.
-    </div>
-</div>
-
-{{-- PENJELASAN --}}
-<div class="card sg-card p-4 mt-4">
-    <h5 class="fw-bold mb-3">Penjelasan Kata Sentimen</h5>
-
-    <p class="text-muted mb-2">
-        Fitur Kata Sentimen digunakan untuk menyimpan kamus kata positif dan negatif.
-        Kamus ini digunakan pada fitur Intelijen Berita untuk menentukan apakah berita
-        memiliki sentimen positif, netral, atau negatif terhadap risiko rantai pasok.
-    </p>
-
-    <div class="alert alert-info mb-0">
-        Fitur ini sesuai dengan konsep Analisis Sentimen Berbasis Leksikon,
-        yaitu analisis sentimen berdasarkan pencocokan kata dengan kamus.
-    </div>
-</div>
+@endforeach
 
 @endsection
-
-@push('scripts')
-<script>
-    const positiveWords = {{ $summary['positive_words'] }};
-    const negativeWords = {{ $summary['negative_words'] }};
-
-    new Chart(document.getElementById('wordDistributionChart'), {
-        type: 'doughnut',
-        data: {
-            labels: [
-                'Kata Positif',
-                'Kata Negatif'
-            ],
-            datasets: [{
-                data: [
-                    positiveWords,
-                    negativeWords
-                ]
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false
-        }
-    });
-
-    document.getElementById('positiveSearch').addEventListener('keyup', function () {
-        const keyword = this.value.toLowerCase();
-        const rows = document.querySelectorAll('.positive-row');
-
-        rows.forEach(function (row) {
-            const text = row.getAttribute('data-search');
-
-            if (text.includes(keyword)) {
-                row.style.display = '';
-
-                if (row.nextElementSibling) {
-                    row.nextElementSibling.style.display = '';
-                }
-            } else {
-                row.style.display = 'none';
-
-                if (row.nextElementSibling) {
-                    row.nextElementSibling.style.display = 'none';
-                }
-            }
-        });
-    });
-
-    document.getElementById('negativeSearch').addEventListener('keyup', function () {
-        const keyword = this.value.toLowerCase();
-        const rows = document.querySelectorAll('.negative-row');
-
-        rows.forEach(function (row) {
-            const text = row.getAttribute('data-search');
-
-            if (text.includes(keyword)) {
-                row.style.display = '';
-
-                if (row.nextElementSibling) {
-                    row.nextElementSibling.style.display = '';
-                }
-            } else {
-                row.style.display = 'none';
-
-                if (row.nextElementSibling) {
-                    row.nextElementSibling.style.display = 'none';
-                }
-            }
-        });
-    });
-</script>
-@endpush
