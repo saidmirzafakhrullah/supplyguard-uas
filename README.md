@@ -1,59 +1,236 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# SupplyGuard
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+SupplyGuard adalah aplikasi **Global Supply Chain Risk Intelligence Platform** berbasis Laravel yang digunakan untuk memantau risiko rantai pasok global. Sistem ini menggabungkan data negara, cuaca, ekonomi, nilai tukar, berita, dan pelabuhan untuk membantu analisis risiko aktivitas impor dan logistik internasional.
 
-## About Laravel
+## Deskripsi Project
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+Project ini dibuat untuk memenuhi tugas UAS Pemrograman Web dengan studi kasus pemantauan risiko rantai pasok global. SupplyGuard menyediakan dashboard analitik yang menampilkan data negara, risiko cuaca, risiko inflasi, dampak nilai tukar, berita global, lokasi pelabuhan, perbandingan negara, daftar monitoring favorit, serta dashboard admin.
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+Sistem ini menggunakan beberapa API eksternal dan juga menyediakan REST API internal agar data dapat diakses dalam format JSON.
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+## Fitur Utama
 
-## Learning Laravel
+- Dashboard utama monitoring risiko rantai pasok global
+- Data negara global dari REST Countries API
+- Risk Scoring Engine
+- Weather Monitoring menggunakan Open-Meteo
+- Currency Impact menggunakan Exchange Rate API
+- News Intelligence menggunakan GNews API
+- Port Location Dashboard
+- Data Visualization Dashboard
+- Country Comparison Engine
+- Favorite Monitoring List
+- Admin Dashboard
+- Manajemen user
+- Manajemen dataset pelabuhan
+- Manajemen artikel analisis
+- Manajemen kamus sentimen positif dan negatif
+- Log pemanggilan API
+- REST API internal
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework. You can also check out [Laravel Learn](https://laravel.com/learn), where you will be guided through building a modern Laravel application.
+## API Eksternal yang Digunakan
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+- REST Countries API
+- Open-Meteo API
+- World Bank API
+- Exchange Rate API
+- GNews API
+- OpenStreetMap / Leaflet
 
-## Laravel Sponsors
+## REST API Internal
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+Aplikasi ini menyediakan beberapa endpoint API internal:
 
-### Premium Partners
+- `GET /api/countries`
+- `GET /api/risk`
+- `GET /api/ports`
+- `GET /api/news`
+- `GET /api/currency`
 
-- **[Vehikl](https://vehikl.com)**
-- **[Tighten Co.](https://tighten.co)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Redberry](https://redberry.international/laravel-development)**
-- **[Active Logic](https://activelogic.com)**
+## Teknologi yang Digunakan
 
-## Contributing
+- Laravel 12
+- PHP 8.2
+- MySQL
+- Bootstrap 5
+- Bootstrap Icons
+- Chart.js
+- Leaflet.js
+- REST API Integration
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+## Akun Default
 
-## Code of Conduct
+### Admin
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+Email:
 
-## Security Vulnerabilities
+```text
+admin@gmail.com
+```
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+Password:
 
-## License
+```text
+Admin@12345
+```
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+### User
+
+Email:
+
+```text
+user@gmail.com
+```
+
+Password:
+
+```text
+User@12345
+```
+
+## Cara Menjalankan Project
+
+Clone repository:
+
+```bash
+git clone https://github.com/saidmirzafakhrullah/supplyguard-uas.git
+```
+
+Masuk ke folder project:
+
+```bash
+cd supplyguard-uas
+```
+
+Install dependency PHP:
+
+```bash
+composer install
+```
+
+Install dependency frontend:
+
+```bash
+npm install
+```
+
+Salin file environment:
+
+```bash
+copy .env.example .env
+```
+
+Generate application key:
+
+```bash
+php artisan key:generate
+```
+
+Atur konfigurasi database di file `.env`:
+
+```env
+DB_CONNECTION=mysql
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_DATABASE=supplyguard_uas
+DB_USERNAME=root
+DB_PASSWORD=
+```
+
+Isi API key yang diperlukan pada file `.env`:
+
+```env
+REST_COUNTRIES_API_KEY=
+REST_COUNTRIES_BASE_URL=https://api.restcountries.com/countries/v5
+
+GNEWS_API_KEY=
+GNEWS_BASE_URL=https://gnews.io/api/v4
+GNEWS_LANGUAGE=en
+GNEWS_MAX_ARTICLES=10
+```
+
+Jalankan migrasi dan seeder:
+
+```bash
+php artisan migrate --seed
+```
+
+Jalankan server Laravel:
+
+```bash
+php artisan serve
+```
+
+Jalankan Vite:
+
+```bash
+npm run dev
+```
+
+Buka aplikasi melalui browser:
+
+```text
+http://127.0.0.1:8000
+```
+
+## Struktur Fitur
+
+### User
+
+User dapat mengakses fitur:
+
+- Dashboard utama
+- Negara global
+- Risk scoring
+- Weather monitoring
+- Currency impact
+- News intelligence
+- Port location
+- Data visualization
+- Country comparison
+- Favorite monitoring
+
+### Admin
+
+Admin dapat mengakses fitur:
+
+- Manajemen user
+- Manajemen pelabuhan
+- Manajemen artikel analisis
+- Manajemen kamus sentimen
+- Log pemanggilan API
+
+## Database
+
+Project ini menggunakan MySQL dengan beberapa tabel utama, seperti:
+
+- users
+- ports
+- articles
+- sentiment_words
+- api_logs
+- watchlists
+- countries
+- risk_scores
+- news_cache
+- sessions
+- cache
+- jobs
+
+Total tabel project berada pada skala 15–20 tabel sesuai kebutuhan project.
+
+## Catatan Penting
+
+File berikut tidak perlu dimasukkan ke ZIP pengumpulan:
+
+- `.env`
+- `vendor`
+- `node_modules`
+- `.git`
+- `database/database.sqlite`
+
+File `.env.example` boleh dikirim karena tidak berisi API key asli.
+
+## Status Project
+
+Project SupplyGuard sudah memiliki fitur utama, dashboard analitik, integrasi API eksternal, REST API internal, sistem risk scoring, sentiment analysis sederhana, peta interaktif, serta dashboard admin.
