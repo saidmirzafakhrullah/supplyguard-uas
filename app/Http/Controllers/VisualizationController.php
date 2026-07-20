@@ -21,7 +21,15 @@ class VisualizationController extends Controller
             $countries = $this->fallbackCountries();
         }
 
-        $worldBankData = $this->getWorldBankData();
+        /*
+         * Pada hosting Railway, pemanggilan World Bank API
+         * untuk banyak indikator dapat memakan waktu lama
+         * dan menyebabkan error timeout.
+         *
+         * Oleh karena itu, halaman Visualisasi Data menggunakan
+         * perhitungan cadangan agar tetap cepat ditampilkan.
+         */
+        $worldBankData = [];
 
         $countries = collect($countries)
             ->map(function (array $country) use ($worldBankData) {
@@ -100,8 +108,7 @@ class VisualizationController extends Controller
                 . $worldBankCountryCount
                 . ' negara.';
         } else {
-            $apiStatus = 'World Bank API tidak dapat diakses. '
-                . 'Sistem menggunakan perhitungan cadangan.';
+            $apiStatus = 'Halaman visualisasi menggunakan perhitungan cadangan agar data dapat ditampilkan lebih cepat pada hosting.';
         }
 
         return view('visualization.index', compact(
