@@ -16,13 +16,17 @@ class VisualizationController extends Controller
     public function index()
     {
         /*
-         * Pada hosting Railway, halaman Visualisasi Data dibuat ringan
-         * agar tidak terkena timeout ketika membuka halaman.
+         * Pada hosting Railway, halaman Visualisasi Data
+         * dibuat ringan agar tidak terkena timeout.
          *
-         * Halaman ini menggunakan data cadangan yang tetap bisa dihitung,
-         * ditampilkan dalam grafik, tabel, ringkasan risiko, dan visualisasi.
+         * Data negara diambil dari cache yang sudah dibuat
+         * oleh halaman Negara Global/API Countries.
          */
-        $countries = $this->fallbackCountries();
+        $countries = $this->getCachedCountriesForVisualization();
+
+        if (empty($countries)) {
+            $countries = $this->fallbackCountries();
+        }
 
         /*
          * World Bank API tidak dipanggil langsung dari halaman ini
@@ -108,7 +112,7 @@ class VisualizationController extends Controller
                 . $worldBankCountryCount
                 . ' negara.';
         } else {
-            $apiStatus = 'Halaman visualisasi menggunakan data cadangan agar dapat ditampilkan lebih cepat pada hosting.';
+            $apiStatus = 'Halaman visualisasi menggunakan data negara dari cache dan perhitungan cadangan agar dapat ditampilkan lebih cepat pada hosting.';
         }
 
         return view('visualization.index', compact(
@@ -119,6 +123,108 @@ class VisualizationController extends Controller
             'lowRiskCountries',
             'apiStatus'
         ));
+    }
+
+    /**
+     * Mengambil data negara dari cache agar halaman
+     * Visualisasi Data tidak perlu memanggil API eksternal langsung.
+     */
+    private function getCachedCountriesForVisualization(): array
+    {
+        $cacheKeys = [
+            'supplyguard.countries.page.v5.cleaned',
+            'supplyguard.countries.page.public.v3.cleaned',
+            'supplyguard.api.countries.v6.cleaned',
+            'supplyguard.api.countries.v5',
+            'supplyguard.api.countries.v5.cleaned',
+        ];
+
+        foreach ($cacheKeys as $cacheKey) {
+            $countries = Cache::get($cacheKey);
+
+            if (
+                is_array($countries)
+                && count($countries) > 10
+            ) {
+                return collect($countries)
+                    ->map(function (array $country) {
+                        return [
+                            'name' => $country['name']
+                                ?? $country['common_name']
+                                ?? 'Unknown',
+
+                            'official_name' => $country['official_name']
+                                ?? $country['official']
+                                ?? $country['name']
+                                ?? 'Unknown',
+
+                            'code' => strtoupper(
+                                (string) (
+                                    $country['code']
+                                    ?? $country['country_code']
+                                    ?? $country['cca3']
+                                    ?? '-'
+                                )
+                            ),
+
+                            'capital' => $country['capital']
+                                ?? '-',
+
+                            'region' => $country['region']
+                                ?? '-',
+
+                            'subregion' => $country['subregion']
+                                ?? '-',
+
+                            'population' => (int) (
+                                $country['population']
+                                ?? 0
+                            ),
+
+                            'currency_code' => $country['currency_code']
+                                ?? $country['currency']
+                                ?? 'USD',
+
+                            'currency_name' => $country['currency_name']
+                                ?? 'Unknown Currency',
+
+                            'flag' => $country['flag']
+                                ?? $country['flag_url']
+                                ?? null,
+
+                            'latitude' => (float) (
+                                $country['latitude']
+                                ?? $country['lat']
+                                ?? 0
+                            ),
+
+                            'longitude' => (float) (
+                                $country['longitude']
+                                ?? $country['lng']
+                                ?? $country['lon']
+                                ?? 0
+                            ),
+
+                            'landlocked' => (bool) (
+                                $country['landlocked']
+                                ?? false
+                            ),
+                        ];
+                    })
+                    ->filter(function (array $country) {
+                        return $country['name'] !== 'Unknown'
+                            && $country['code'] !== '-'
+                            && $country['code'] !== ''
+                            && strlen($country['code']) === 3;
+                    })
+                    ->unique('code')
+                    ->sortBy('name')
+                    ->values()
+                    ->toArray();
+            }
+        }
+
+        return [];
     }
 
     /**
@@ -859,7 +965,7 @@ class VisualizationController extends Controller
     }
 
     /**
-     * Data negara cadangan jika API gagal.
+     * Data negara cadangan jika cache negara global belum tersedia.
      */
     private function fallbackCountries(): array
     {
