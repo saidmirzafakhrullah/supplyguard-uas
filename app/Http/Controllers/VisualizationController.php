@@ -15,19 +15,19 @@ class VisualizationController extends Controller
      */
     public function index()
     {
-        $countries = $this->getCountries();
-
-        if (empty($countries)) {
-            $countries = $this->fallbackCountries();
-        }
+        /*
+         * Pada hosting Railway, halaman Visualisasi Data dibuat ringan
+         * agar tidak terkena timeout ketika membuka halaman.
+         *
+         * Halaman ini menggunakan data cadangan yang tetap bisa dihitung,
+         * ditampilkan dalam grafik, tabel, ringkasan risiko, dan visualisasi.
+         */
+        $countries = $this->fallbackCountries();
 
         /*
-         * Pada hosting Railway, pemanggilan World Bank API
-         * untuk banyak indikator dapat memakan waktu lama
-         * dan menyebabkan error timeout.
-         *
-         * Oleh karena itu, halaman Visualisasi Data menggunakan
-         * perhitungan cadangan agar tetap cepat ditampilkan.
+         * World Bank API tidak dipanggil langsung dari halaman ini
+         * karena request global banyak indikator dapat melebihi batas
+         * waktu eksekusi Railway.
          */
         $worldBankData = [];
 
@@ -108,7 +108,7 @@ class VisualizationController extends Controller
                 . $worldBankCountryCount
                 . ' negara.';
         } else {
-            $apiStatus = 'Halaman visualisasi menggunakan perhitungan cadangan agar data dapat ditampilkan lebih cepat pada hosting.';
+            $apiStatus = 'Halaman visualisasi menggunakan data cadangan agar dapat ditampilkan lebih cepat pada hosting.';
         }
 
         return view('visualization.index', compact(
@@ -123,6 +123,8 @@ class VisualizationController extends Controller
 
     /**
      * Mengambil seluruh negara dari REST Countries API v5.
+     * Function ini tetap disimpan agar struktur file tidak berubah,
+     * tetapi tidak dipanggil langsung oleh halaman Data Visualization.
      */
     private function getCountries(): array
     {
@@ -414,6 +416,8 @@ class VisualizationController extends Controller
 
     /**
      * Mengambil indikator ekonomi dari World Bank API.
+     * Function ini tetap disimpan, tetapi tidak dipanggil langsung
+     * oleh halaman Data Visualization agar tidak timeout.
      */
     private function getWorldBankData(): array
     {
@@ -913,6 +917,139 @@ class VisualizationController extends Controller
                 'flag' => null,
                 'latitude' => 39.9,
                 'longitude' => 116.4,
+                'landlocked' => false,
+            ],
+
+            [
+                'name' => 'United States',
+                'official_name' =>
+                    'United States of America',
+                'code' => 'USA',
+                'capital' => 'Washington, D.C.',
+                'region' => 'Americas',
+                'subregion' =>
+                    'North America',
+                'population' => 334000000,
+                'currency_code' => 'USD',
+                'currency_name' =>
+                    'United States Dollar',
+                'flag' => null,
+                'latitude' => 38.9,
+                'longitude' => -77.0,
+                'landlocked' => false,
+            ],
+
+            [
+                'name' => 'Japan',
+                'official_name' =>
+                    'Japan',
+                'code' => 'JPN',
+                'capital' => 'Tokyo',
+                'region' => 'Asia',
+                'subregion' =>
+                    'Eastern Asia',
+                'population' => 125000000,
+                'currency_code' => 'JPY',
+                'currency_name' =>
+                    'Japanese Yen',
+                'flag' => null,
+                'latitude' => 35.6,
+                'longitude' => 139.7,
+                'landlocked' => false,
+            ],
+
+            [
+                'name' => 'Singapore',
+                'official_name' =>
+                    'Republic of Singapore',
+                'code' => 'SGP',
+                'capital' => 'Singapore',
+                'region' => 'Asia',
+                'subregion' =>
+                    'South-Eastern Asia',
+                'population' => 5600000,
+                'currency_code' => 'SGD',
+                'currency_name' =>
+                    'Singapore Dollar',
+                'flag' => null,
+                'latitude' => 1.35,
+                'longitude' => 103.8,
+                'landlocked' => false,
+            ],
+
+            [
+                'name' => 'Australia',
+                'official_name' =>
+                    'Commonwealth of Australia',
+                'code' => 'AUS',
+                'capital' => 'Canberra',
+                'region' => 'Oceania',
+                'subregion' =>
+                    'Australia and New Zealand',
+                'population' => 26000000,
+                'currency_code' => 'AUD',
+                'currency_name' =>
+                    'Australian Dollar',
+                'flag' => null,
+                'latitude' => -35.3,
+                'longitude' => 149.1,
+                'landlocked' => false,
+            ],
+
+            [
+                'name' => 'Brazil',
+                'official_name' =>
+                    'Federative Republic of Brazil',
+                'code' => 'BRA',
+                'capital' => 'Brasília',
+                'region' => 'Americas',
+                'subregion' =>
+                    'South America',
+                'population' => 216000000,
+                'currency_code' => 'BRL',
+                'currency_name' =>
+                    'Brazilian Real',
+                'flag' => null,
+                'latitude' => -15.8,
+                'longitude' => -47.9,
+                'landlocked' => false,
+            ],
+
+            [
+                'name' => 'India',
+                'official_name' =>
+                    'Republic of India',
+                'code' => 'IND',
+                'capital' => 'New Delhi',
+                'region' => 'Asia',
+                'subregion' =>
+                    'Southern Asia',
+                'population' => 1428000000,
+                'currency_code' => 'INR',
+                'currency_name' =>
+                    'Indian Rupee',
+                'flag' => null,
+                'latitude' => 28.6,
+                'longitude' => 77.2,
+                'landlocked' => false,
+            ],
+
+            [
+                'name' => 'South Africa',
+                'official_name' =>
+                    'Republic of South Africa',
+                'code' => 'ZAF',
+                'capital' => 'Pretoria',
+                'region' => 'Africa',
+                'subregion' =>
+                    'Southern Africa',
+                'population' => 60000000,
+                'currency_code' => 'ZAR',
+                'currency_name' =>
+                    'South African Rand',
+                'flag' => null,
+                'latitude' => -25.7,
+                'longitude' => 28.2,
                 'landlocked' => false,
             ],
         ];
