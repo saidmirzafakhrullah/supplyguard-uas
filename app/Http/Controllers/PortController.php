@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Port;
+use App\Models\Country;
 use App\Services\ApiLogService;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
@@ -41,19 +43,21 @@ class PortController extends Controller
 
             'available_ports' => $countryCollection
                 ->where('port_status', 'Available')
-                ->count(),
+                ->sum('port_count'),
 
             'limited_ports' => $countryCollection
                 ->where('port_status', 'Limited')
-                ->count(),
+                ->sum('port_count'),
 
             'no_seaport' => $countryCollection
                 ->where('port_status', 'No Seaport')
                 ->count(),
         ];
 
-        $apiStatus = 'Data negara berhasil dimuat dari REST Countries API v5. '
-            . 'Informasi pelabuhan menggunakan dataset internal SupplyGuard.';
+        $databasePortCount = Port::query()->count();
+        $apiStatus = $databasePortCount > 0
+            ? "{$databasePortCount} pelabuhan dimuat dari database. Sumber utama: NGA World Port Index. Peta menampilkan satu pelabuhan representatif per negara agar tetap ringan."
+            : 'Data negara dimuat dari REST Countries API v5. Informasi pelabuhan menggunakan dataset internal cadangan.';
 
         return view(
             'ports.index',
@@ -71,6 +75,25 @@ class PortController extends Controller
      */
     private function getCountries(): array
     {
+        $stored = Country::query()->orderBy('name')->get();
+        if ($stored->isNotEmpty()) {
+            return $stored->map(fn (Country $country) => [
+                'name' => $country->name,
+                'official_name' => $country->official_name ?: $country->name,
+                'code' => $country->code,
+                'capital' => $country->capital ?: '-',
+                'region' => $country->region ?: '-',
+                'subregion' => $country->subregion ?: '-',
+                'population' => $country->population,
+                'currency_code' => $country->currency_code ?: 'USD',
+                'currency_name' => $country->currency_name ?: 'Unknown Currency',
+                'flag' => $country->flag ?: '',
+                'latitude' => (float) ($country->latitude ?? 0),
+                'longitude' => (float) ($country->longitude ?? 0),
+                'landlocked' => $country->landlocked,
+            ])->all();
+        }
+
         return Cache::remember(
             'supplyguard.port.countries.v5',
             now()->addHours(12),
@@ -366,6 +389,29 @@ class PortController extends Controller
      */
     private function knownPorts(): array
     {
+        $storedPorts = Port::query()
+            ->where('status', '!=', 'inactive')
+            ->orderByRaw("CASE capacity WHEN 'high' THEN 1 WHEN 'medium' THEN 2 ELSE 3 END")
+            ->orderBy('port_name')
+            ->get();
+
+        if ($storedPorts->isNotEmpty()) {
+            return $storedPorts
+                ->groupBy('country_code')
+                ->map(function ($ports) {
+                    $main = $ports->first();
+                    return [
+                        'port_name' => $main->port_name,
+                        'city' => $main->city ?: $main->country,
+                        'latitude' => $main->latitude,
+                        'longitude' => $main->longitude,
+                        'port_count' => $ports->count(),
+                        'source' => $main->source ?: 'Database SupplyGuard',
+                    ];
+                })
+                ->all();
+        }
+
         return Cache::remember(
             'supplyguard.port.internal.dataset.v2',
             now()->addDay(),
@@ -542,8 +588,7 @@ class PortController extends Controller
 
             $portRisk = 10 + ($seed % 20);
 
-            $dataSource =
-                'Dataset Internal SupplyGuard';
+            $dataSource = $port['source'] ?? 'Dataset Internal SupplyGuard';
         } elseif (
             (bool) ($country['landlocked'] ?? false)
         ) {
@@ -567,6 +612,15 @@ class PortController extends Controller
 
             $dataSource =
                 'Analisis Negara Tanpa Akses Laut';
+        } elseif (Port::query()->exists()) {
+            $portName = 'Belum Ada Data Pelabuhan';
+            $portCity = '-';
+            $portLatitude = (float) ($country['latitude'] ?? 0);
+            $portLongitude = (float) ($country['longitude'] ?? 0);
+            $portCount = 0;
+            $portStatus = 'Limited';
+            $portRisk = 50;
+            $dataSource = 'Tidak ada record pada database ports';
         } else {
             $portName =
                 'Pelabuhan Internasional Utama '

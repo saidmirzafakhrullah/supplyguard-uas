@@ -3,6 +3,10 @@
 namespace App\Http\Controllers;
 
 use App\Models\ApiLog;
+use App\Models\Country;
+use App\Models\NewsCache;
+use App\Models\Port;
+use App\Services\RiskSnapshotService;
 use Illuminate\Support\Facades\Cache;
 
 class DashboardController extends Controller
@@ -17,6 +21,7 @@ class DashboardController extends Controller
         $inflationData = $this->getCachedInflation();
         $exchangeRates = $this->getCachedExchangeRates();
         $cachedNewsArticles = $this->getCachedNewsArticles();
+        $riskSnapshots = RiskSnapshotService::latestByCountry();
 
         /*
          * Berita disaring agar hanya berisi topik
@@ -68,6 +73,9 @@ class DashboardController extends Controller
                     newsArticles: $newsArticles
                 );
             })
+            ->map(fn (array $country) =>
+                RiskSnapshotService::apply($country, $riskSnapshots)
+            )
             ->sortBy('name')
             ->values();
 
@@ -92,6 +100,11 @@ class DashboardController extends Controller
                 ->values();
         }
 
+        $monitoredCountries = $monitoredCountries
+            ->map(fn (array $country) =>
+                RiskSnapshotService::apply($country, $riskSnapshots)
+            );
+
         $riskLabels = $monitoredCountries
             ->pluck('name')
             ->values()
@@ -106,27 +119,20 @@ class DashboardController extends Controller
             ->all();
 
         $summary = [
-            'countries' => !empty($countries)
-                ? count($countries)
-                : 254,
+            'countries' => Country::query()->count() ?: count($countries),
 
             /*
              * Negara yang tidak terkunci daratan
              * dianggap memiliki akses pelabuhan laut.
              */
-            'ports' => !empty($countries)
-                ? collect($countries)
-                    ->where('landlocked', false)
-                    ->count()
-                : 208,
+            'ports' => Port::query()->count(),
 
             /*
              * Tetap menampilkan jumlah artikel API,
              * sedangkan tabel hanya menampilkan berita relevan.
              */
-            'news' => !empty($cachedNewsArticles)
-                ? count($cachedNewsArticles)
-                : count($newsArticles),
+            'news' => NewsCache::query()->count()
+                ?: count($cachedNewsArticles ?: $newsArticles),
 
             'average_risk' => round(
                 (float) $monitoredCountries->avg('total_risk'),
@@ -201,6 +207,11 @@ class DashboardController extends Controller
      */
     private function getCachedCountries(): array
     {
+        $countries = RiskSnapshotService::countries();
+        if (!empty($countries)) {
+            return $countries;
+        }
+
         $cacheKeys = [
             'supplyguard.risk.countries.v5',
             'supplyguard.watchlist.countries.v5',

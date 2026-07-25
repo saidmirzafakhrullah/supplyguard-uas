@@ -22,6 +22,13 @@ class Port extends Model
         'congestion_level',
         'risk_level',
         'notes',
+        'source',
+        'external_id',
+        'wpi_number',
+        'unlocode',
+        'harbor_size',
+        'harbor_type',
+        'harbor_use',
     ];
 
     /**

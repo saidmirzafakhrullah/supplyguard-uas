@@ -14,7 +14,9 @@
             </p>
         </div>
 
-        <span class="badge bg-primary">REST Countries API</span>
+        <span class="badge bg-primary">
+            {{ str_contains(strtolower($apiStatus), 'database') ? 'Database' : 'REST Countries API' }}
+        </span>
     </div>
 </div>
 
@@ -55,7 +57,7 @@
                     <h5 class="fw-bold mb-1">Profil Negara</h5>
 
                     <small class="text-muted">
-                        Detail negara berdasarkan data REST Countries API.
+                        Detail negara berdasarkan dataset yang dikelola administrator.
                     </small>
                 </div>
 

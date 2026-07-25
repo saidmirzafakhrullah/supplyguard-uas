@@ -189,6 +189,17 @@
             <h5 class="fw-bold mb-3">Komponen Risiko Negara Terpilih</h5>
             <canvas id="componentChart" height="120"></canvas>
         </div>
+
+        <div class="card sg-card p-4 mt-4">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h5 class="fw-bold mb-0">Histori Risiko 30 Hari</h5>
+                <span class="badge bg-primary">Database</span>
+            </div>
+            <canvas id="historyChart" height="120"></canvas>
+            <small id="historyEmpty" class="text-muted mt-2 d-none">
+                Histori akan bertambah setiap hari saat halaman penilaian risiko dibuka.
+            </small>
+        </div>
     </div>
 </div>
 
@@ -311,7 +322,9 @@
 @push('scripts')
 <script>
     const countries = @json($countries);
+    const riskHistory = @json($riskHistory);
     let componentChart = null;
+    let historyChart = null;
 
     function showCountryRisk() {
         const selectedIndex = document.getElementById('countrySelect').value;
@@ -394,6 +407,26 @@
                 }
             }
         );
+
+        const history = riskHistory[country.code] ?? [];
+        document.getElementById('historyEmpty').classList.toggle('d-none', history.length > 1);
+
+        if (historyChart) historyChart.destroy();
+        historyChart = new Chart(document.getElementById('historyChart'), {
+            type: 'line',
+            data: {
+                labels: history.map(item => item.date),
+                datasets: [{
+                    label: 'Total Risiko',
+                    data: history.map(item => item.score),
+                    borderColor: '#0d6efd',
+                    backgroundColor: 'rgba(13, 110, 253, .12)',
+                    fill: true,
+                    tension: .3
+                }]
+            },
+            options: { responsive: true, scales: { y: { beginAtZero: true, max: 100 } } }
+        });
     }
 
     document.addEventListener('DOMContentLoaded', function () {

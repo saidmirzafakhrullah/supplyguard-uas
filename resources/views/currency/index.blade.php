@@ -13,7 +13,7 @@
             </p>
         </div>
 
-        <span class="badge bg-warning text-dark">Exchange Rate API Siap</span>
+        <span class="badge bg-warning text-dark">Live API / Cached</span>
     </div>
 </div>
 

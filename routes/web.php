@@ -8,6 +8,7 @@ use App\Http\Controllers\WeatherController;
 use App\Http\Controllers\CurrencyController;
 use App\Http\Controllers\NewsController;
 use App\Http\Controllers\PortController;
+use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\VisualizationController;
 use App\Http\Controllers\ComparisonController;
 use App\Http\Controllers\WatchlistController;
@@ -16,6 +17,7 @@ use App\Http\Controllers\Admin\PortController as AdminPortController;
 use App\Http\Controllers\Admin\ArticleController as AdminArticleController;
 use App\Http\Controllers\Admin\WordController as AdminWordController;
 use App\Http\Controllers\Admin\ApiLogController as AdminApiLogController;
+use App\Http\Controllers\Admin\CountryController as AdminCountryController;
 
 Route::get('/', function () {
     return redirect()->route('dashboard');
@@ -74,6 +76,15 @@ Route::middleware(['auth'])->group(function () {
         [ComparisonController::class, 'index']
     )->name('comparison.index');
 
+    Route::get('/profile', [ProfileController::class, 'edit'])
+        ->name('profile.edit');
+
+    Route::patch('/profile', [ProfileController::class, 'update'])
+        ->name('profile.update');
+
+    Route::delete('/profile', [ProfileController::class, 'destroy'])
+        ->name('profile.destroy');
+
     /*
     |--------------------------------------------------------------------------
     | Daftar Pemantauan Favorit
@@ -105,6 +116,31 @@ Route::middleware(['auth'])->group(function () {
         ->name('admin.')
         ->middleware('admin')
         ->group(function () {
+
+            Route::get(
+                '/countries',
+                [AdminCountryController::class, 'index']
+            )->name('countries.index');
+
+            Route::post(
+                '/countries',
+                [AdminCountryController::class, 'store']
+            )->name('countries.store');
+
+            Route::post(
+                '/countries/sync',
+                [AdminCountryController::class, 'sync']
+            )->name('countries.sync');
+
+            Route::put(
+                '/countries/{country}',
+                [AdminCountryController::class, 'update']
+            )->name('countries.update');
+
+            Route::delete(
+                '/countries/{country}',
+                [AdminCountryController::class, 'destroy']
+            )->name('countries.destroy');
 
             /*
             |--------------------------------------------------------------------------
@@ -142,6 +178,11 @@ Route::middleware(['auth'])->group(function () {
                 '/ports',
                 [AdminPortController::class, 'store']
             )->name('ports.store');
+
+            Route::post(
+                '/ports/sync-wpi',
+                [AdminPortController::class, 'syncWorldPortIndex']
+            )->name('ports.sync-wpi');
 
             Route::put(
                 '/ports/{port}',

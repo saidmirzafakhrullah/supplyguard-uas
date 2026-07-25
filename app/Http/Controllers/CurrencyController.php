@@ -2,54 +2,42 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Country;
+use App\Models\ExchangeRate;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
+use Throwable;
 
 class CurrencyController extends Controller
 {
     public function index()
     {
-        $countries = [];
-        $apiStatus = 'Mengambil data semua negara untuk currency impact';
-
-        try {
-            $url = 'https://restcountries.com/v3.1/all?fields=name,cca2,capital,region,subregion,currencies,flags,population';
-
-            $response = Http::timeout(30)
-                ->withOptions(['verify' => false])
-                ->get($url);
-
-            if ($response->successful()) {
-                $countries = $this->mapRestCountries($response->json());
-                $apiStatus = 'Data negara berhasil dari REST Countries API';
-            }
-        } catch (\Exception $e) {
-            $apiStatus = 'REST Countries gagal, mencoba dataset cadangan';
-        }
-
-        if (count($countries) < 100) {
-            try {
-                $backupUrl = 'https://raw.githubusercontent.com/mledoze/countries/master/countries.json';
-
-                $backupResponse = Http::timeout(30)
-                    ->withOptions(['verify' => false])
-                    ->get($backupUrl);
-
-                if ($backupResponse->successful()) {
-                    $countries = $this->mapMledozeCountries($backupResponse->json());
-                    $apiStatus = 'Data negara berhasil dari dataset global cadangan';
-                }
-            } catch (\Exception $e) {
-                $apiStatus = 'Semua API gagal, memakai data cadangan lokal';
-            }
-        }
+        $countries = Country::query()->orderBy('name')->get()
+            ->map(fn (Country $country) => [
+                'name' => $country->name,
+                'official_name' => $country->official_name ?: $country->name,
+                'code' => $country->code,
+                'capital' => $country->capital ?: '-',
+                'region' => $country->region ?: '-',
+                'subregion' => $country->subregion ?: '-',
+                'population' => $country->population,
+                'currency_code' => $country->currency_code ?: 'N/A',
+                'currency_name' => $country->currency_name ?: 'No official currency data',
+                'flag' => $country->flag ?: '',
+            ])->all();
 
         if (count($countries) === 0) {
             $countries = $this->fallbackCountries();
         }
 
+        [$rates, $previousRates, $dataSource, $rateDate] = $this->getExchangeData();
+        $apiStatus = $dataSource === 'Live API'
+            ? "Kurs aktual berhasil dimuat dari Exchange Rate API ({$rateDate})."
+            : 'Exchange Rate API gagal. Sistem memakai snapshot kurs terakhir yang tersimpan.';
+
         $countries = collect($countries)
-            ->map(function ($country) {
-                return $this->addCurrencyImpact($country);
+            ->map(function ($country) use ($rates, $previousRates, $dataSource) {
+                return $this->addCurrencyImpact($country, $rates, $previousRates, $dataSource);
             })
             ->sortBy('name')
             ->values()
@@ -120,7 +108,12 @@ class CurrencyController extends Controller
             ->toArray();
     }
 
-    private function addCurrencyImpact(array $country)
+    private function addCurrencyImpact(
+        array $country,
+        array $rates,
+        array $previousRates,
+        string $dataSource
+    )
     {
         $currencyCode = $country['currency_code'];
 
@@ -136,34 +129,24 @@ class CurrencyController extends Controller
             return $country;
         }
 
-        $baseRates = [
-            'USD' => 1,
-            'IDR' => 16200,
-            'EUR' => 0.92,
-            'CNY' => 7.25,
-            'JPY' => 157,
-            'SGD' => 1.35,
-            'AUD' => 1.50,
-            'MYR' => 4.70,
-            'THB' => 36,
-            'PHP' => 58,
-            'GBP' => 0.79,
-            'KRW' => 1380,
-            'INR' => 83,
-            'CAD' => 1.37,
-            'CHF' => 0.89,
-        ];
-
-        $seed = abs(crc32($country['name'] . $country['currency_code']));
-
-        if (isset($baseRates[$currencyCode])) {
-            $exchangeRate = $baseRates[$currencyCode];
-        } else {
-            $exchangeRate = round(1 + ($seed % 9000) / 100, 2);
+        if (!isset($rates[$currencyCode])) {
+            $country['exchange_rate'] = null;
+            $country['volatility'] = 0;
+            $country['exchange_change'] = 0;
+            $country['currency_risk'] = 0;
+            $country['category'] = 'No Data';
+            $country['badge'] = 'bg-secondary text-white';
+            $country['recommendation'] = 'Nilai tukar mata uang ini tidak tersedia dari API.';
+            $country['data_source'] = 'No Data';
+            return $country;
         }
 
-        $volatility = 5 + ($seed % 60);
-        $exchangeChange = round(((intdiv($seed, 7) % 200) - 100) / 10, 2);
+        $exchangeRate = (float) $rates[$currencyCode];
+        $previousRate = (float) ($previousRates[$currencyCode] ?? $exchangeRate);
+        $exchangeChange = $previousRate > 0
+            ? round((($exchangeRate - $previousRate) / $previousRate) * 100, 2)
+            : 0;
+        $volatility = round(abs($exchangeChange), 2);
 
         $currencyRisk = round(
             ($volatility * 0.60) +
@@ -200,8 +183,64 @@ class CurrencyController extends Controller
         $country['category'] = $category;
         $country['badge'] = $badge;
         $country['recommendation'] = $recommendation;
+        $country['data_source'] = $dataSource;
 
         return $country;
+    }
+
+    private function getExchangeData(): array
+    {
+        $endpoint = 'https://open.er-api.com/v6/latest/USD';
+        $today = now()->toDateString();
+        $latestStoredDate = ExchangeRate::query()->max('rate_date');
+        $latestStoredRates = $latestStoredDate
+            ? ExchangeRate::query()->whereDate('rate_date', substr((string) $latestStoredDate, 0, 10))
+                ->pluck('rate', 'currency_code')->map(fn ($rate) => (float) $rate)->all()
+            : [];
+        $previousDate = ExchangeRate::query()
+            ->whereDate('rate_date', '<', $today)
+            ->max('rate_date');
+        $previousRates = $previousDate
+            ? ExchangeRate::query()->whereDate('rate_date', substr((string) $previousDate, 0, 10))
+                ->pluck('rate', 'currency_code')->map(fn ($rate) => (float) $rate)->all()
+            : $latestStoredRates;
+
+        try {
+            $response = Http::acceptJson()->timeout(15)->retry(2, 300)->get($endpoint);
+            $rates = $response->successful() ? $response->json('rates', []) : [];
+            if (!is_array($rates) || $rates === []) {
+                throw new \RuntimeException('API tidak mengembalikan data kurs.');
+            }
+
+            $now = now();
+            $rows = collect($rates)->map(fn ($rate, $code) => [
+                'base_currency' => 'USD',
+                'currency_code' => strtoupper((string) $code),
+                'rate' => (float) $rate,
+                'rate_date' => $today,
+                'source' => 'Exchange Rate API',
+                'created_at' => $now,
+                'updated_at' => $now,
+            ])->values()->all();
+            ExchangeRate::query()->upsert(
+                $rows,
+                ['base_currency', 'currency_code', 'rate_date'],
+                ['rate', 'source', 'updated_at']
+            );
+
+            Cache::put('supplyguard.currency.last_snapshot', $rates, now()->addDays(7));
+            Cache::put('supplyguard.currency.last_date', $today, now()->addDays(7));
+
+            return [$rates, $previousRates, 'Live API', $today];
+        } catch (Throwable $exception) {
+            report($exception);
+            return [
+                $latestStoredRates,
+                $previousRates ?: $latestStoredRates,
+                'Database Cache',
+                $latestStoredDate ? substr((string) $latestStoredDate, 0, 10) : '-',
+            ];
+        }
     }
 
     private function fallbackCountries()

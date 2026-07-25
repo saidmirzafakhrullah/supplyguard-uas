@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\RiskScore;
+use App\Models\Country;
 use App\Services\ApiLogService;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
@@ -45,6 +47,20 @@ class RiskController extends Controller
             ->values()
             ->toArray();
 
+        $this->persistRiskScores($countries);
+
+        $riskHistory = RiskScore::query()
+            ->whereIn('country_code', collect($countries)->pluck('code'))
+            ->where('score_date', '>=', now()->subDays(29)->toDateString())
+            ->orderBy('score_date')
+            ->get(['country_code', 'score_date', 'total_risk'])
+            ->groupBy('country_code')
+            ->map(fn ($rows) => $rows->map(fn (RiskScore $score) => [
+                'date' => $score->score_date->format('d M'),
+                'score' => (float) $score->total_risk,
+            ])->values()->all())
+            ->all();
+
         $sources = [];
 
         if (!empty($weatherData)) {
@@ -75,7 +91,52 @@ class RiskController extends Controller
 
         return view(
             'risk.index',
-            compact('countries', 'apiStatus')
+            compact('countries', 'apiStatus', 'riskHistory')
+        );
+    }
+
+    /**
+     * Menyimpan satu snapshot risiko per negara per hari.
+     */
+    private function persistRiskScores(array $countries): void
+    {
+        $now = now();
+        $rows = collect($countries)
+            ->filter(fn (array $country) =>
+                preg_match('/^[A-Z]{3}$/', (string) ($country['code'] ?? ''))
+            )
+            ->map(fn (array $country) => [
+                'country_code' => $country['code'],
+                'country_name' => $country['name'],
+                'weather_risk' => $country['weather_risk'],
+                'inflation_risk' => $country['inflation_risk'],
+                'currency_risk' => $country['currency_risk'],
+                'news_risk' => $country['news_risk'],
+                'port_risk' => $country['port_risk'],
+                'total_risk' => $country['total_risk'],
+                'category' => $country['category'],
+                'recommendation' => $country['recommendation'],
+                'score_date' => $now->toDateString(),
+                'source' => $country['risk_data_source'],
+                'created_at' => $now,
+                'updated_at' => $now,
+            ])
+            ->values()
+            ->all();
+
+        if ($rows === []) {
+            return;
+        }
+
+        RiskScore::query()->upsert(
+            $rows,
+            ['country_code', 'score_date'],
+            [
+                'country_name', 'weather_risk', 'inflation_risk',
+                'currency_risk', 'news_risk', 'port_risk',
+                'total_risk', 'category', 'recommendation',
+                'source', 'updated_at',
+            ]
         );
     }
 
@@ -84,6 +145,21 @@ class RiskController extends Controller
      */
     private function getCountries(): array
     {
+        $stored = Country::query()->orderBy('name')->get();
+        if ($stored->isNotEmpty()) {
+            return $stored->map(fn (Country $country) => [
+                'name' => $country->name, 'official_name' => $country->official_name,
+                'code' => $country->code, 'capital' => $country->capital ?: '-',
+                'region' => $country->region ?: '-', 'subregion' => $country->subregion ?: '-',
+                'population' => $country->population,
+                'currency_code' => $country->currency_code ?: 'USD',
+                'currency_name' => $country->currency_name ?: 'Unknown Currency',
+                'currency' => trim(($country->currency_code ?: '').' - '.($country->currency_name ?: ''), ' -') ?: '-',
+                'flag' => $country->flag ?: '', 'lat' => (float) ($country->latitude ?? 0),
+                'lng' => (float) ($country->longitude ?? 0), 'landlocked' => $country->landlocked,
+            ])->all();
+        }
+
         return Cache::remember(
             'supplyguard.risk.countries.v5',
             now()->addHours(12),

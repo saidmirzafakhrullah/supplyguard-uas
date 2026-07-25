@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Services\ApiLogService;
+use App\Services\RiskSnapshotService;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use RuntimeException;
@@ -34,14 +35,21 @@ class VisualizationController extends Controller
          * waktu eksekusi Railway.
          */
         $worldBankData = [];
+        $riskSnapshots = RiskSnapshotService::latestByCountry();
 
         $countries = collect($countries)
-            ->map(function (array $country) use ($worldBankData) {
+            ->map(function (array $country) use ($worldBankData, $riskSnapshots) {
                 $economicData = $worldBankData[$country['code']] ?? null;
 
-                return $this->addRiskData(
+                $country = $this->addRiskData(
                     $country,
                     $economicData
+                );
+
+                return RiskSnapshotService::apply(
+                    $country,
+                    $riskSnapshots,
+                    'risk_score'
                 );
             })
             ->sortBy('name')
@@ -112,7 +120,9 @@ class VisualizationController extends Controller
                 . $worldBankCountryCount
                 . ' negara.';
         } else {
-            $apiStatus = 'Halaman visualisasi menggunakan data negara dari cache dan perhitungan cadangan agar dapat ditampilkan lebih cepat pada hosting.';
+            $apiStatus = $riskSnapshots->isNotEmpty()
+                ? 'Visualisasi menggunakan dataset negara dan snapshot risiko terbaru dari database.'
+                : 'Snapshot risiko belum tersedia. Sistem sementara menggunakan perhitungan cadangan.';
         }
 
         return view('visualization.index', compact(
@@ -131,6 +141,11 @@ class VisualizationController extends Controller
      */
     private function getCachedCountriesForVisualization(): array
     {
+        $countries = RiskSnapshotService::countries();
+        if (!empty($countries)) {
+            return $countries;
+        }
+
         $cacheKeys = [
             'supplyguard.countries.page.v5.cleaned',
             'supplyguard.countries.page.public.v3.cleaned',

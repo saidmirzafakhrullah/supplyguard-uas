@@ -9,7 +9,12 @@ class PortSeeder extends Seeder
 {
     public function run(): void
     {
-        DB::table('ports')->truncate();
+        if (DB::table('ports')->exists()) {
+            $this->command?->warn(
+                'PortSeeder dilewati karena tabel ports sudah berisi data. Data WPI tetap aman.'
+            );
+            return;
+        }
 
         $ports = [
             ['Pelabuhan Tanjung Priok', 'Indonesia', 'IDN', 'Jakarta', 'Asia', -6.1040, 106.8860],

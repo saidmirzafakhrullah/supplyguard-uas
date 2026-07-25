@@ -3,6 +3,10 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\Country;
+use App\Models\NewsCache;
+use App\Models\Port;
+use App\Models\RiskScore;
 use App\Services\ApiLogService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -28,7 +32,9 @@ class SupplyGuardApiController extends Controller
             'data' => $countries,
             'meta' => [
                 'total' => count($countries),
-                'source' => 'REST Countries API v5',
+                'source' => Country::query()->exists()
+                    ? 'Database SupplyGuard'
+                    : 'REST Countries API v5',
                 'note' => 'Data hanya menampilkan negara dengan kode ISO Alpha-3 yang valid.',
                 'generated_at' => now()->toISOString(),
             ],
@@ -40,6 +46,34 @@ class SupplyGuardApiController extends Controller
      */
     public function risk(Request $request): JsonResponse
     {
+        $latestDate = RiskScore::query()->max('score_date');
+
+        if ($latestDate) {
+            $latestDate = substr((string) $latestDate, 0, 10);
+            $query = RiskScore::query()->whereDate('score_date', $latestDate);
+            $country = trim((string) $request->query('country', ''));
+            if ($country !== '') {
+                $query->where(function ($nested) use ($country) {
+                    $nested->where('country_code', 'like', "%{$country}%")
+                        ->orWhere('country_name', 'like', "%{$country}%");
+                });
+            }
+
+            $scores = $query->orderBy('country_name')->get();
+            return response()->json([
+                'success' => true,
+                'message' => 'Snapshot penilaian risiko berhasil diambil.',
+                'data' => $scores,
+                'meta' => [
+                    'total' => $scores->count(),
+                    'score_date' => $latestDate,
+                    'source' => 'Database risk_scores',
+                    'method' => 'SG-Risk Weighted Scoring',
+                    'generated_at' => now()->toISOString(),
+                ],
+            ]);
+        }
+
         $countries = $this->filterCountries(
             $this->getCountries(),
             $request->query('country')
@@ -73,23 +107,45 @@ class SupplyGuardApiController extends Controller
      */
     public function ports(Request $request): JsonResponse
     {
-        $countries = $this->filterCountries(
-            $this->getCountries(),
-            $request->query('country')
-        );
+        $perPage = max(1, min(100, (int) $request->query('per_page', 50)));
+        $country = trim((string) $request->query('country', ''));
+        $search = trim((string) $request->query('search', ''));
 
-        $data = array_map(function (array $country) {
-            return $this->buildPortData($country);
-        }, $countries);
+        $ports = Port::query()
+            ->when($country !== '', function ($query) use ($country) {
+                $query->where(function ($nested) use ($country) {
+                    $nested->where('country_code', 'like', "%{$country}%")
+                        ->orWhere('country', 'like', "%{$country}%");
+                });
+            })
+            ->when($search !== '', function ($query) use ($search) {
+                $query->where(function ($nested) use ($search) {
+                    $nested->where('port_name', 'like', "%{$search}%")
+                        ->orWhere('city', 'like', "%{$search}%")
+                        ->orWhere('unlocode', 'like', "%{$search}%");
+                });
+            })
+            ->orderBy('country')
+            ->orderBy('port_name')
+            ->paginate($perPage);
 
         return response()->json([
             'success' => true,
             'message' => 'Data pelabuhan berhasil diambil.',
-            'data' => $data,
+            'data' => $ports->items(),
             'meta' => [
-                'total' => count($data),
-                'source' => 'Dataset internal dan simulasi pelabuhan',
+                'total' => $ports->total(),
+                'current_page' => $ports->currentPage(),
+                'last_page' => $ports->lastPage(),
+                'per_page' => $ports->perPage(),
+                'source' => 'Database ports / NGA World Port Index',
                 'generated_at' => now()->toISOString(),
+            ],
+            'links' => [
+                'first' => $ports->url(1),
+                'last' => $ports->url($ports->lastPage()),
+                'previous' => $ports->previousPageUrl(),
+                'next' => $ports->nextPageUrl(),
             ],
         ]);
     }
@@ -99,6 +155,39 @@ class SupplyGuardApiController extends Controller
      */
     public function news(Request $request): JsonResponse
     {
+        if (NewsCache::query()->exists()) {
+            $perPage = max(1, min(100, (int) $request->query('per_page', 20)));
+            $country = trim((string) $request->query('country', ''));
+            $sentiment = trim((string) $request->query('sentiment', ''));
+
+            $articles = NewsCache::query()
+                ->when($country !== '', function ($query) use ($country) {
+                    $query->where(function ($nested) use ($country) {
+                        $nested->where('country_code', 'like', "%{$country}%")
+                            ->orWhere('country_name', 'like', "%{$country}%");
+                    });
+                })
+                ->when($sentiment !== '', fn ($query) =>
+                    $query->where('sentiment', $sentiment)
+                )
+                ->latest('published_at')
+                ->paginate($perPage);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Berita tersimpan berhasil diambil.',
+                'data' => $articles->items(),
+                'meta' => [
+                    'total' => $articles->total(),
+                    'current_page' => $articles->currentPage(),
+                    'last_page' => $articles->lastPage(),
+                    'per_page' => $articles->perPage(),
+                    'source' => 'Database news_cache',
+                    'generated_at' => now()->toISOString(),
+                ],
+            ]);
+        }
+
         $countries = $this->filterCountries(
             $this->getCountries(),
             $request->query('country')
@@ -156,6 +245,27 @@ class SupplyGuardApiController extends Controller
      */
     private function getCountries(): array
     {
+        $stored = Country::query()->orderBy('name')->get();
+
+        if ($stored->isNotEmpty()) {
+            return $stored->map(fn (Country $country) => [
+                'name' => $country->name,
+                'official_name' => $country->official_name ?: $country->name,
+                'code' => $country->code,
+                'capital' => $country->capital ?: '-',
+                'region' => $country->region ?: '-',
+                'subregion' => $country->subregion ?: '-',
+                'population' => $country->population,
+                'currency_code' => $country->currency_code ?: 'USD',
+                'currency_name' => $country->currency_name ?: 'Unknown Currency',
+                'currency' => trim(($country->currency_code ?: '').' - '.($country->currency_name ?: ''), ' -') ?: '-',
+                'flag' => $country->flag ?: '',
+                'latitude' => (float) ($country->latitude ?? 0),
+                'longitude' => (float) ($country->longitude ?? 0),
+                'landlocked' => $country->landlocked,
+            ])->all();
+        }
+
         return Cache::remember(
             'supplyguard.api.countries.v6.cleaned',
             now()->addHours(12),

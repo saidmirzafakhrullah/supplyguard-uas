@@ -140,6 +140,14 @@
                 </a>
 
                 <a
+                    href="{{ route('admin.countries.index') }}"
+                    class="{{ request()->routeIs('admin.countries.*') ? 'active' : '' }}"
+                >
+                    <i class="bi bi-globe-americas"></i>
+                    Kelola Negara
+                </a>
+
+                <a
                     href="{{ route('admin.ports.index') }}"
                     class="{{ request()->routeIs('admin.ports.*') ? 'active' : '' }}"
                 >

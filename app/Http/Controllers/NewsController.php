@@ -2,6 +2,9 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\NewsCache;
+use App\Models\Country;
+use App\Models\SentimentWord;
 use App\Services\ApiLogService;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
@@ -63,7 +66,11 @@ class NewsController extends Controller
         $positiveWords = $this->positiveWords();
         $negativeWords = $this->negativeWords();
 
-        if ($usingRealNews) {
+        $newsSource = data_get($articles, '0.data_source', 'Fallback');
+
+        if ($usingRealNews && $newsSource === 'Database Cache') {
+            $apiStatus = 'GNews sedang tidak tersedia. Berita dimuat dari cache database.';
+        } elseif ($usingRealNews) {
             $apiStatus = 'Berita aktual berhasil diambil dari GNews API. '
                 . count($articles)
                 . ' artikel digunakan untuk analisis seluruh negara.';
@@ -87,6 +94,20 @@ class NewsController extends Controller
      */
     private function getCountries(): array
     {
+        $stored = Country::query()->orderBy('name')->get();
+        if ($stored->isNotEmpty()) {
+            return $stored->map(fn (Country $country) => [
+                'name' => $country->name, 'official_name' => $country->official_name,
+                'code' => $country->code, 'capital' => $country->capital ?: '-',
+                'region' => $country->region ?: '-', 'subregion' => $country->subregion ?: '-',
+                'population' => $country->population,
+                'currency_code' => $country->currency_code ?: 'USD',
+                'currency_name' => $country->currency_name ?: 'Unknown Currency',
+                'flag' => $country->flag ?: '', 'latitude' => (float) ($country->latitude ?? 0),
+                'longitude' => (float) ($country->longitude ?? 0), 'landlocked' => $country->landlocked,
+            ])->all();
+        }
+
         return Cache::remember(
             'supplyguard.api.countries.v5',
             now()->addHours(12),
@@ -516,6 +537,7 @@ class NewsController extends Controller
                             'source.url',
                             ''
                         ),
+                        'data_source' => 'Live API',
                     ];
                 })
                 ->values()
@@ -532,6 +554,8 @@ class NewsController extends Controller
                 $articles,
                 now()->addMinutes(30)
             );
+
+            $this->persistNewsCache($articles);
 
             $responseTime = (int) round(
                 (microtime(true) - $startedAt) * 1000
@@ -578,7 +602,61 @@ class NewsController extends Controller
 
             report($exception);
 
-            return [];
+            return NewsCache::query()
+                ->latest('published_at')
+                ->limit(20)
+                ->get()
+                ->map(fn (NewsCache $article) => [
+                    'title' => $article->title,
+                    'description' => $article->description ?: '',
+                    'content' => '',
+                    'url' => $article->url ?: '',
+                    'image' => data_get($article->raw_data, 'image'),
+                    'published_at' => $article->published_at?->toISOString(),
+                    'source_name' => $article->source_name ?: 'Database',
+                    'source_url' => '',
+                    'data_source' => 'Database Cache',
+                ])->all();
+        }
+    }
+
+    private function persistNewsCache(array $articles): void
+    {
+        $countryCandidates = Country::query()->get(['code', 'name']);
+
+        foreach ($articles as $article) {
+            $text = trim(($article['title'] ?? '').' '.($article['description'] ?? ''));
+            $analysis = $this->analyzeSentiment($text);
+            $newsRisk = $this->calculateNewsRisk(
+                $analysis['sentiment'],
+                $analysis['positive_count'],
+                $analysis['negative_count']
+            );
+            $matchedCountry = $countryCandidates->first(fn (Country $country) =>
+                    mb_strlen($country->name) >= 3
+                    && str_contains(mb_strtolower($text), mb_strtolower($country->name))
+                );
+
+            NewsCache::query()->updateOrCreate(
+                [
+                    'title' => $article['title'],
+                    'url' => $article['url'] ?: null,
+                ],
+                [
+                    'country_code' => $matchedCountry?->code,
+                    'country_name' => $matchedCountry?->name,
+                    'description' => $article['description'] ?: null,
+                    'source_name' => $article['source_name'] ?: 'GNews',
+                    'category' => $this->detectNewsCategory($text),
+                    'sentiment' => $analysis['sentiment'],
+                    'positive_words' => $analysis['positive_count'],
+                    'negative_words' => $analysis['negative_count'],
+                    'news_risk' => $newsRisk,
+                    'published_at' => $article['published_at'],
+                    'fetched_at' => now(),
+                    'raw_data' => ['image' => $article['image']],
+                ]
+            );
         }
     }
 
@@ -1055,7 +1133,15 @@ class NewsController extends Controller
      */
     private function positiveWords(): array
     {
-        return [
+        $storedWords = SentimentWord::query()
+            ->where('type', 'positive')
+            ->where('status', 'active')
+            ->pluck('word')
+            ->filter()
+            ->values()
+            ->all();
+
+        return $storedWords ?: [
             'growth',
             'increase',
             'profit',
@@ -1084,7 +1170,15 @@ class NewsController extends Controller
      */
     private function negativeWords(): array
     {
-        return [
+        $storedWords = SentimentWord::query()
+            ->where('type', 'negative')
+            ->where('status', 'active')
+            ->pluck('word')
+            ->filter()
+            ->values()
+            ->all();
+
+        return $storedWords ?: [
             'war',
             'crisis',
             'inflation',

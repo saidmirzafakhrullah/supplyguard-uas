@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Watchlist;
 use App\Services\ApiLogService;
+use App\Services\RiskSnapshotService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
@@ -68,6 +69,7 @@ class WatchlistController extends Controller
         $newsArticles = empty($selectedCountries)
             ? []
             : $this->getNewsArticles();
+        $riskSnapshots = RiskSnapshotService::latestByCountry();
 
         /*
          * Data lengkap negara tetap digunakan untuk pilihan
@@ -92,7 +94,8 @@ class WatchlistController extends Controller
             ->map(function (array $country) use (
                 $weatherData,
                 $exchangeRates,
-                $newsArticles
+                $newsArticles,
+                $riskSnapshots
             ) {
                 $country = $this->addMonitoringData(
                     $country,
@@ -103,7 +106,11 @@ class WatchlistController extends Controller
 
                 $country['is_favorite'] = true;
 
-                return $country;
+                return RiskSnapshotService::apply(
+                    $country,
+                    $riskSnapshots,
+                    'risk_score'
+                );
             })
             ->sortBy('name')
             ->values()
@@ -134,7 +141,7 @@ class WatchlistController extends Controller
 
         $apiStatus = empty($watchlistCountries)
             ? 'Belum ada negara favorit. Tambahkan negara untuk memulai pemantauan.'
-            : 'Daftar negara menggunakan REST Countries API v5. '
+            : 'Daftar negara dan snapshot risiko menggunakan database. '
                 . 'Pemantauan negara favorit menggunakan Open-Meteo, '
                 . 'Exchange Rate API, dan GNews API.';
 
@@ -255,6 +262,11 @@ class WatchlistController extends Controller
      */
     private function getCountries(): array
     {
+        $countries = RiskSnapshotService::countries();
+        if (!empty($countries)) {
+            return $countries;
+        }
+
         return Cache::remember(
             'supplyguard.watchlist.countries.v5',
             now()->addHours(12),

@@ -3,11 +3,15 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\Country;
 use App\Models\Port;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
+use Illuminate\Support\Facades\Http;
+use RuntimeException;
+use Throwable;
 
 class PortController extends Controller
 {
@@ -116,6 +120,169 @@ class PortController extends Controller
                 . $portName
                 . ' berhasil dihapus.'
             );
+    }
+
+    /**
+     * Mengimpor seluruh pelabuhan resmi dari NGA World Port Index.
+     */
+    public function syncWorldPortIndex(): RedirectResponse
+    {
+        $countryMap = Country::query()
+            ->whereNotNull('alpha2_code')
+            ->get()
+            ->keyBy(fn (Country $country) => strtoupper($country->alpha2_code));
+
+        if ($countryMap->isEmpty()) {
+            return to_route('admin.ports.index')->with(
+                'error',
+                'Sinkronkan data negara terlebih dahulu agar kode negara WPI dapat dipetakan.'
+            );
+        }
+
+        $endpoint = 'https://vcps.nga.mil/nauticalpubs-feature/rest/services/'
+            . 'WPI/World_Port_Index_Viewer/FeatureServer/0/query';
+        $offset = 0;
+        $batchSize = 2000;
+        $synced = 0;
+        $skipped = 0;
+
+        try {
+            do {
+                $response = Http::asForm()
+                    ->withOptions(['verify' => false])
+                    ->timeout(90)
+                    ->retry(2, 1000)
+                    ->post($endpoint, [
+                        'where' => '1=1',
+                        'outFields' => implode(',', [
+                            'objectid', 'wpinumber', 'main_port_name',
+                            'harbor_size_code', 'harbor_type_code',
+                            'harbor_use_code', 'wpi_cc', 'unlocode',
+                        ]),
+                        'returnGeometry' => 'true',
+                        'outSR' => '4326',
+                        'orderByFields' => 'objectid ASC',
+                        'resultOffset' => $offset,
+                        'resultRecordCount' => $batchSize,
+                        'f' => 'json',
+                    ]);
+
+                if (!$response->successful()) {
+                    throw new RuntimeException('Server WPI merespons HTTP '.$response->status().'.');
+                }
+
+                $features = $response->json('features', []);
+                if (!is_array($features)) {
+                    throw new RuntimeException('Format respons WPI tidak valid.');
+                }
+
+                foreach ($features as $feature) {
+                    $attributes = $feature['attributes'] ?? [];
+                    $geometry = $feature['geometry'] ?? [];
+                    $alpha2 = strtoupper((string) ($attributes['wpi_cc'] ?? ''));
+                    $country = $countryMap->get($alpha2);
+
+                    if (!$country || !isset($geometry['x'], $geometry['y'])) {
+                        $skipped++;
+                        continue;
+                    }
+
+                    $sizeCode = strtoupper((string) ($attributes['harbor_size_code'] ?? ''));
+                    $capacity = match ($sizeCode) {
+                        'L' => 'high',
+                        'M' => 'medium',
+                        default => 'low',
+                    };
+                    $riskLevel = $this->wpiRiskLevel(
+                        $sizeCode,
+                        (string) ($attributes['harbor_type_code'] ?? ''),
+                        (string) ($attributes['harbor_use_code'] ?? '')
+                    );
+                    $wpiNumber = (int) ($attributes['wpinumber'] ?? 0);
+                    $objectId = (int) ($attributes['objectid'] ?? 0);
+
+                    Port::query()->updateOrCreate(
+                        ['external_id' => 'WPI-'.($wpiNumber ?: $objectId)],
+                        [
+                            'port_name' => (string) ($attributes['main_port_name'] ?? 'Unknown Port'),
+                            'country' => $country->name,
+                            'country_code' => $country->code,
+                            'region' => $country->region,
+                            'latitude' => (float) $geometry['y'],
+                            'longitude' => (float) $geometry['x'],
+                            'status' => 'active',
+                            'capacity' => $capacity,
+                            'congestion_level' => 'low',
+                            'risk_level' => $riskLevel,
+                            'notes' => 'Data resmi NGA World Port Index.',
+                            'source' => 'NGA World Port Index',
+                            'wpi_number' => $wpiNumber ?: null,
+                            'unlocode' => trim((string) ($attributes['unlocode'] ?? '')) ?: null,
+                            'harbor_size' => $this->harborSize($sizeCode),
+                            'harbor_type' => $this->harborType((string) ($attributes['harbor_type_code'] ?? '')),
+                            'harbor_use' => $this->harborUse((string) ($attributes['harbor_use_code'] ?? '')),
+                        ]
+                    );
+                    $synced++;
+                }
+
+                $offset += count($features);
+                $more = (bool) $response->json('exceededTransferLimit', false);
+            } while ($more && $features !== [] && $offset < 20000);
+
+            if ($synced === 0) {
+                throw new RuntimeException('Tidak ada pelabuhan yang dapat dipetakan ke negara tersimpan.');
+            }
+
+            return to_route('admin.ports.index')->with(
+                'success',
+                "Sinkronisasi WPI selesai: {$synced} pelabuhan tersimpan, {$skipped} dilewati."
+            );
+        } catch (Throwable $exception) {
+            report($exception);
+            return to_route('admin.ports.index')->with(
+                'error',
+                'Sinkronisasi World Port Index gagal: '.$exception->getMessage()
+            );
+        }
+    }
+
+    private function harborSize(string $code): string
+    {
+        return ['L' => 'Large', 'M' => 'Medium', 'S' => 'Small', 'V' => 'Very Small'][$code] ?? 'Unknown';
+    }
+
+    private function harborType(string $code): string
+    {
+        return [
+            'CN' => 'Coastal Natural', 'CB' => 'Coastal Breakwater',
+            'CT' => 'Coastal Tide Gates', 'RN' => 'River Natural',
+            'RB' => 'River Basin', 'RT' => 'River Tide Gates',
+            'LC' => 'Canal or Lake', 'OR' => 'Open Roadstead',
+            'TH' => 'Typhoon Harbor', 'N' => 'None',
+        ][strtoupper($code)] ?? 'Unknown';
+    }
+
+    private function harborUse(string $code): string
+    {
+        return [
+            'FISH' => 'Fishing', 'MIL' => 'Military', 'CARGO' => 'Cargo',
+            'FERRY' => 'Ferry', 'UNK' => 'Unknown',
+        ][strtoupper($code)] ?? 'Unknown';
+    }
+
+    private function wpiRiskLevel(string $size, string $type, string $use): string
+    {
+        $score = ['L' => 15, 'M' => 25, 'S' => 35, 'V' => 45][$size] ?? 40;
+        $score += in_array(strtoupper($type), ['N', 'OR'], true) ? 10 : 0;
+        $score += strtoupper($use) === 'CARGO' ? -5 : 0;
+
+        return match (true) {
+            $score <= 25 => 'low',
+            $score <= 50 => 'medium',
+            $score <= 75 => 'high',
+            default => 'critical',
+        };
     }
 
     /**
@@ -237,6 +404,8 @@ class PortController extends Controller
         $validated['country_code'] = strtoupper(
             $validated['country_code']
         );
+
+        $validated['source'] = 'Manual Admin';
 
         return $validated;
     }

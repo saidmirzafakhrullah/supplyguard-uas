@@ -18,6 +18,14 @@
     </div>
 @endif
 
+@if(session('error'))
+    <div class="alert alert-danger alert-dismissible fade show">
+        <i class="bi bi-exclamation-triangle-fill me-2"></i>
+        {{ session('error') }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+@endif
+
 @if($errors->any())
     <div class="alert alert-danger alert-dismissible fade show">
         <i class="bi bi-exclamation-triangle-fill me-2"></i>
@@ -46,15 +54,19 @@
             </p>
         </div>
 
-        <button
-            type="button"
-            class="btn btn-primary"
-            data-bs-toggle="modal"
-            data-bs-target="#addPortModal"
-        >
-            <i class="bi bi-plus-lg me-1"></i>
-            Tambah Pelabuhan
-        </button>
+        <div class="d-flex gap-2">
+            <form method="POST" action="{{ route('admin.ports.sync-wpi') }}" id="wpiSyncForm">
+                @csrf
+                <button class="btn btn-outline-primary" id="wpiSyncButton">
+                    <span class="spinner-border spinner-border-sm me-1 d-none" id="wpiSyncSpinner"></span>
+                    <i class="bi bi-cloud-download me-1" id="wpiSyncIcon"></i>
+                    <span id="wpiSyncText">Sinkronkan World Port Index</span>
+                </button>
+            </form>
+            <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addPortModal">
+                <i class="bi bi-plus-lg me-1"></i> Tambah Pelabuhan
+            </button>
+        </div>
     </div>
 </div>
 
@@ -435,3 +447,18 @@
 </div>
 
 @endsection
+
+@push('scripts')
+<script>
+    document.getElementById('wpiSyncForm')?.addEventListener('submit', function (event) {
+        if (!confirm('Sinkronkan ribuan pelabuhan resmi dari NGA World Port Index? Proses dapat memerlukan beberapa menit.')) {
+            event.preventDefault();
+            return;
+        }
+        document.getElementById('wpiSyncButton').disabled = true;
+        document.getElementById('wpiSyncSpinner').classList.remove('d-none');
+        document.getElementById('wpiSyncIcon').classList.add('d-none');
+        document.getElementById('wpiSyncText').textContent = 'Sedang menyinkronkan...';
+    });
+</script>
+@endpush

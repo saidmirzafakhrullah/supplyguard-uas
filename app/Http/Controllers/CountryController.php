@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Country;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use RuntimeException;
@@ -14,20 +15,43 @@ class CountryController extends Controller
         $countries = [];
         $apiStatus = 'Mengambil data negara global';
 
-        try {
-            $countries = $this->getCountriesFromRestCountriesV5();
-            $apiStatus = 'Data berhasil dimuat dari REST Countries API v5';
-        } catch (Throwable $exception) {
-            report($exception);
+        $storedCountries = Country::query()->orderBy('name')->get();
 
+        if ($storedCountries->isNotEmpty()) {
+            $countries = $storedCountries->map(fn (Country $country) => [
+                'name' => $country->name,
+                'official_name' => $country->official_name ?: '-',
+                'code' => $country->code,
+                'capital' => $country->capital ?: '-',
+                'region' => $country->region ?: '-',
+                'subregion' => $country->subregion ?: '-',
+                'population' => $country->population,
+                'currency' => trim(($country->currency_code ?: '').' - '.($country->currency_name ?: ''), ' -') ?: '-',
+                'languages' => $country->languages ?: '-',
+                'flag' => $country->flag ?: '',
+                'lat' => (float) ($country->latitude ?? 0),
+                'lng' => (float) ($country->longitude ?? 0),
+                'source' => $country->source,
+            ])->all();
+            $apiStatus = 'Data dimuat dari database hasil kelola dan sinkronisasi admin.';
+        }
+
+        if ($countries === []) {
             try {
-                $countries = $this->getCountriesFromRestCountriesPublic();
-                $apiStatus = 'Data berhasil dimuat dari REST Countries Public API';
-            } catch (Throwable $secondException) {
-                report($secondException);
+                $countries = $this->getCountriesFromRestCountriesV5();
+                $apiStatus = 'Data berhasil dimuat dari REST Countries API v5';
+            } catch (Throwable $exception) {
+                report($exception);
 
-                $countries = $this->fallbackCountries();
-                $apiStatus = 'API negara gagal, memakai data cadangan lokal';
+                try {
+                    $countries = $this->getCountriesFromRestCountriesPublic();
+                    $apiStatus = 'Data berhasil dimuat dari REST Countries Public API';
+                } catch (Throwable $secondException) {
+                    report($secondException);
+
+                    $countries = $this->fallbackCountries();
+                    $apiStatus = 'API negara gagal, memakai data cadangan lokal';
+                }
             }
         }
 

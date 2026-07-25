@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Services\ApiLogService;
+use App\Services\RiskSnapshotService;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use RuntimeException;
@@ -22,6 +23,7 @@ class ComparisonController extends Controller
         }
 
         $worldBankData = $this->getWorldBankData();
+        $riskSnapshots = RiskSnapshotService::latestByCountry();
 
         $maximumGdp = collect($worldBankData)
             ->map(function (array $item) {
@@ -39,17 +41,20 @@ class ComparisonController extends Controller
         $countries = collect($countries)
             ->map(function (array $country) use (
                 $worldBankData,
-                $maximumGdp
+                $maximumGdp,
+                $riskSnapshots
             ) {
                 $economicData = $worldBankData[
                     $country['code']
                 ] ?? null;
 
-                return $this->addComparisonData(
+                $country = $this->addComparisonData(
                     $country,
                     $economicData,
                     $maximumGdp
                 );
+
+                return RiskSnapshotService::apply($country, $riskSnapshots);
             })
             ->sortBy('name')
             ->values()
@@ -89,6 +94,11 @@ class ComparisonController extends Controller
      */
     private function getCountries(): array
     {
+        $countries = RiskSnapshotService::countries();
+        if (!empty($countries)) {
+            return $countries;
+        }
+
         return Cache::remember(
             'supplyguard.comparison.countries.v5',
             now()->addHours(12),

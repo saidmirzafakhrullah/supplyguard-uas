@@ -22,6 +22,7 @@ Sistem ini menggunakan beberapa API eksternal dan juga menyediakan REST API inte
 - Favorite Monitoring List
 - Admin Dashboard
 - Manajemen user
+- CRUD dan sinkronisasi dataset negara
 - Manajemen dataset pelabuhan
 - Manajemen artikel analisis
 - Manajemen kamus sentimen positif dan negatif
@@ -195,6 +196,7 @@ User dapat mengakses fitur:
 Admin dapat mengakses fitur:
 
 - Manajemen user
+- CRUD negara dan sinkronisasi REST Countries API ke database
 - Manajemen pelabuhan
 - Manajemen artikel analisis
 - Manajemen kamus sentimen
