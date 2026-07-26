@@ -44,6 +44,12 @@ class AdminPortSyncTest extends TestCase
             'port_name' => 'Tanjung Priok', 'source' => 'NGA World Port Index',
             'capacity' => 'high', 'unlocode' => 'ID TPP',
         ]);
+
+        Http::assertSent(function ($request) {
+            return $request->method() === 'GET'
+                && (int) $request['resultRecordCount'] === 200
+                && (int) $request['resultOffset'] === 0;
+        });
     }
 
     public function test_port_seeder_does_not_delete_existing_wpi_data(): void

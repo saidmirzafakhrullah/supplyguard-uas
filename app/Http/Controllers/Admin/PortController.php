@@ -142,17 +142,22 @@ class PortController extends Controller
         $endpoint = 'https://vcps.nga.mil/nauticalpubs-feature/rest/services/'
             . 'WPI/World_Port_Index_Viewer/FeatureServer/0/query';
         $offset = 0;
-        $batchSize = 2000;
+        // Respons 2.000 fitur cukup besar dan sering diputus oleh NGA
+        // ketika dipanggil dari hosting. Ambil sedikit demi sedikit agar
+        // ukuran respons dan penggunaan memori tetap stabil.
+        $batchSize = 200;
         $synced = 0;
         $skipped = 0;
 
         try {
             do {
-                $response = Http::asForm()
+                $response = Http::acceptJson()
+                    ->withUserAgent('SupplyGuard/1.0 World Port Index Sync')
                     ->withOptions(['verify' => false])
-                    ->timeout(90)
-                    ->retry(2, 1000)
-                    ->post($endpoint, [
+                    ->connectTimeout(20)
+                    ->timeout(60)
+                    ->retry(4, 1500)
+                    ->get($endpoint, [
                         'where' => '1=1',
                         'outFields' => implode(',', [
                             'objectid', 'wpinumber', 'main_port_name',
