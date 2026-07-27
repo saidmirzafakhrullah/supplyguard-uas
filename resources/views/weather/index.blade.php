@@ -70,10 +70,10 @@
             <label class="form-label">Area Logistik</label>
 
             <select id="areaSelect" class="form-select mb-3">
-                <option>Area Pelabuhan</option>
-                <option>Area Gudang</option>
-                <option>Jalur Pengiriman</option>
-                <option>Pusat Distribusi</option>
+                <option value="port">Area Pelabuhan</option>
+                <option value="warehouse">Area Gudang</option>
+                <option value="shipping">Jalur Pengiriman</option>
+                <option value="distribution">Pusat Distribusi</option>
             </select>
 
             <button onclick="showCountryWeather()" class="btn btn-primary w-100">
@@ -118,6 +118,11 @@
                     <tr>
                         <td>Garis Bujur</td>
                         <td id="countryLongitude" class="fw-bold text-end">-</td>
+                    </tr>
+
+                    <tr>
+                        <td>Area Dianalisis</td>
+                        <td id="selectedArea" class="fw-bold text-end">-</td>
                     </tr>
 
                     <tr>
@@ -298,17 +303,17 @@
 <div class="card sg-card p-4 mt-4">
     <h5 class="fw-bold mb-3">Perhitungan Risiko Cuaca</h5>
 
-    <p class="text-muted mb-2">
-        Sistem menghitung risiko cuaca berdasarkan suhu, curah hujan,
-        kecepatan angin, dan risiko badai.
-    </p>
-
-    <div class="alert alert-info mb-0">
-        Skor Cuaca =
-        (Dampak Suhu × 25%) +
-        (Dampak Curah Hujan × 30%) +
-        (Dampak Angin × 25%) +
-        (Risiko Badai × 20%).
+    <p class="text-muted">Bobot disesuaikan dengan karakteristik operasional setiap area.</p>
+    <div class="table-responsive">
+        <table class="table table-sm align-middle mb-0">
+            <thead><tr><th>Area</th><th>Suhu</th><th>Hujan</th><th>Angin</th><th>Badai</th></tr></thead>
+            <tbody>
+                <tr><td>Pelabuhan</td><td>10%</td><td>25%</td><td>35%</td><td>30%</td></tr>
+                <tr><td>Gudang</td><td>45%</td><td>35%</td><td>10%</td><td>10%</td></tr>
+                <tr><td>Jalur Pengiriman</td><td>15%</td><td>30%</td><td>30%</td><td>25%</td></tr>
+                <tr><td>Pusat Distribusi</td><td>25%</td><td>35%</td><td>25%</td><td>15%</td></tr>
+            </tbody>
+        </table>
     </div>
 </div>
 @endsection
@@ -404,7 +409,26 @@
         }
     }
 
-    function calculateWeatherRisk(temperature, rainfall, windSpeed, stormRisk) {
+    const areaProfiles = {
+        port: {
+            label: 'Area Pelabuhan', weights: [0.10, 0.25, 0.35, 0.30],
+            actions: ['Operasi pelabuhan aman berjalan.', 'Pantau angin dan jadwal sandar kapal.', 'Siapkan penundaan sandar atau pelabuhan alternatif.', 'Hentikan sementara operasi pelabuhan yang berisiko.']
+        },
+        warehouse: {
+            label: 'Area Gudang', weights: [0.45, 0.35, 0.10, 0.10],
+            actions: ['Kondisi penyimpanan relatif aman.', 'Periksa ventilasi, suhu, dan perlindungan barang.', 'Amankan barang sensitif suhu serta potensi kebocoran.', 'Pindahkan barang rentan dan hentikan aktivitas gudang berisiko.']
+        },
+        shipping: {
+            label: 'Jalur Pengiriman', weights: [0.15, 0.30, 0.30, 0.25],
+            actions: ['Jalur pengiriman relatif aman.', 'Pantau kondisi rute sebelum keberangkatan.', 'Siapkan jadwal dan jalur pengiriman alternatif.', 'Tunda pengiriman sampai kondisi cuaca membaik.']
+        },
+        distribution: {
+            label: 'Pusat Distribusi', weights: [0.25, 0.35, 0.25, 0.15],
+            actions: ['Aktivitas distribusi relatif aman.', 'Pantau akses jalan dan proses bongkar muat.', 'Atur ulang jadwal distribusi dan siapkan rute darat alternatif.', 'Batasi distribusi sampai akses dan cuaca kembali aman.']
+        }
+    };
+
+    function calculateWeatherRisk(temperature, rainfall, windSpeed, stormRisk, areaType) {
         let temperatureImpact = 10;
 
         if (temperature > 38) {
@@ -435,29 +459,30 @@
             windImpact = 35;
         }
 
+        const profile = areaProfiles[areaType] || areaProfiles.port;
         const weatherScore = (
-            (temperatureImpact * 0.25) +
-            (rainfallImpact * 0.30) +
-            (windImpact * 0.25) +
-            (stormRisk * 0.20)
+            (temperatureImpact * profile.weights[0]) +
+            (rainfallImpact * profile.weights[1]) +
+            (windImpact * profile.weights[2]) +
+            (stormRisk * profile.weights[3])
         ).toFixed(2);
 
         let category = 'Low';
         let badge = 'risk-low';
-        let recommendation = 'Kondisi cuaca aman untuk aktivitas impor.';
+        let recommendation = profile.actions[0];
 
         if (weatherScore > 25 && weatherScore <= 50) {
             category = 'Medium';
             badge = 'risk-medium';
-            recommendation = 'Pantau kondisi cuaca sebelum pengiriman.';
+            recommendation = profile.actions[1];
         } else if (weatherScore > 50 && weatherScore <= 75) {
             category = 'High';
             badge = 'risk-high';
-            recommendation = 'Siapkan jadwal pengiriman alternatif.';
+            recommendation = profile.actions[2];
         } else if (weatherScore > 75) {
             category = 'Critical';
             badge = 'bg-dark text-white';
-            recommendation = 'Tunda pengiriman sampai kondisi cuaca membaik.';
+            recommendation = profile.actions[3];
         }
 
         return {
@@ -467,7 +492,8 @@
             weatherScore,
             category,
             badge,
-            recommendation
+            recommendation,
+            profile
         };
     }
 
@@ -487,11 +513,13 @@
         stormRisk,
         source
     ) {
+        const areaType = document.getElementById('areaSelect').value;
         const result = calculateWeatherRisk(
             temperature,
             rainfall,
             windSpeed,
-            stormRisk
+            stormRisk,
+            areaType
         );
 
         document.getElementById('temperatureValue').innerText =
@@ -547,6 +575,9 @@
         document.getElementById('countryLongitude').innerText =
             country.longitude ?? '-';
 
+        document.getElementById('selectedArea').innerText =
+            result.profile.label;
+
         document.getElementById('dataSource').innerText = source;
 
         const flag = document.getElementById('countryFlag');
@@ -597,7 +628,7 @@
                         'Badai'
                     ],
                     datasets: [{
-                        label: 'Komponen Cuaca',
+                        label: 'Dampak Cuaca - ' + result.profile.label,
                         data: [
                             result.temperatureImpact,
                             result.rainfallImpact,
@@ -691,6 +722,10 @@
     }
 
     document.addEventListener('DOMContentLoaded', function () {
+        document.getElementById('countrySelect')
+            .addEventListener('change', showCountryWeather);
+        document.getElementById('areaSelect')
+            .addEventListener('change', showCountryWeather);
         showCountryWeather();
     });
 </script>
