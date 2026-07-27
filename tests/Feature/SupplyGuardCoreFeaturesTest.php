@@ -10,6 +10,7 @@ use App\Models\SentimentWord;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Cache;
 use Tests\TestCase;
 
 class SupplyGuardCoreFeaturesTest extends TestCase
@@ -224,6 +225,22 @@ class SupplyGuardCoreFeaturesTest extends TestCase
             ->assertSee('<b>1</b>', false)
             ->assertSee('Indonesia')
             ->assertDontSee('Abkhazia');
+    }
+
+    public function test_comparison_page_does_not_wait_for_external_api(): void
+    {
+        $this->country();
+        Cache::forget('supplyguard.comparison.world_bank.v1');
+        Http::fake();
+
+        $this->actingAs(User::factory()->create())
+            ->get(route('comparison.index'))
+            ->assertOk()
+            ->assertViewHas('apiStatus', fn (string $status) =>
+                str_contains($status, 'Data negara dan risiko dimuat dari database')
+            );
+
+        Http::assertNothingSent();
     }
 
 }

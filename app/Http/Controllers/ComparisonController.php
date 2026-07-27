@@ -68,15 +68,14 @@ class ComparisonController extends Controller
             ->count();
 
         if ($worldBankCountryCount > 0) {
-            $apiStatus = 'Data negara berhasil dimuat dari '
-                . 'REST Countries API v5. Data GDP dan inflasi '
+            $apiStatus = 'Data negara dimuat dari database. Data GDP dan inflasi '
                 . 'World Bank tersedia untuk '
                 . $worldBankCountryCount
                 . ' negara.';
         } else {
-            $apiStatus = 'Data negara berhasil dimuat, tetapi '
-                . 'World Bank API tidak menyediakan data. '
-                . 'Sistem menggunakan perhitungan cadangan.';
+            $apiStatus = 'Data negara dan risiko dimuat dari database. '
+                . 'Cache World Bank belum tersedia; indikator ekonomi '
+                . 'menggunakan perhitungan cadangan agar halaman tetap cepat.';
         }
 
         return view(
@@ -402,12 +401,14 @@ class ComparisonController extends Controller
 
         $cachedData = Cache::get($cacheKey);
 
-        if (
-            is_array($cachedData)
-            && !empty($cachedData)
-        ) {
+        if (is_array($cachedData)) {
             return $cachedData;
         }
+
+        // Halaman interaktif tidak boleh menunggu tiga request World Bank
+        // yang dapat melampaui batas waktu Railway. Data ekonomi akan
+        // memakai cache bila tersedia dan perhitungan cadangan bila belum.
+        return [];
 
         $startedAt = microtime(true);
 

@@ -20,6 +20,10 @@
     </div>
 </div>
 
+<div class="alert alert-info border-0 shadow-sm mb-4">
+    <i class="bi bi-database-check me-2"></i>{{ $apiStatus }}
+</div>
+
 {{-- PEMILIHAN NEGARA --}}
 <div class="card sg-card p-4 mb-4">
     <h5 class="fw-bold mb-3">Bandingkan Negara</h5>
