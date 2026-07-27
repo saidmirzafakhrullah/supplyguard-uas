@@ -87,7 +87,11 @@ class SupplyGuardCoreFeaturesTest extends TestCase
         ])]);
 
         $this->actingAs(User::factory()->create())->get(route('currency.index'))
-            ->assertOk()->assertSee('Live API')->assertSee('16000');
+            ->assertOk()->assertSee('Live API')->assertSee('16000')
+            ->assertViewHas('rateHistory', fn (array $history) =>
+                isset($history['IDR'])
+                && (float) $history['IDR'][0]['rate'] === 16000.0
+            );
 
         $this->assertDatabaseHas('exchange_rates', [
             'base_currency' => 'USD',

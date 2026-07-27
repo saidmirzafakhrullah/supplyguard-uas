@@ -73,6 +73,8 @@
                 type="number"
                 class="form-control mb-3"
                 value="10000"
+                min="0"
+                step="0.01"
             >
 
             <button onclick="calculateCurrencyImpact()" class="btn btn-primary w-100">
@@ -182,7 +184,8 @@
         </div>
 
         <div class="card sg-card p-4 mt-4">
-            <h5 class="fw-bold mb-3">Tren Risiko Mata Uang</h5>
+            <h5 class="fw-bold mb-1">Riwayat Kurs 30 Hari</h5>
+            <small class="text-muted">Snapshot kurs asli yang tersimpan di database</small>
             <canvas id="currencyChart" height="130"></canvas>
         </div>
     </div>
@@ -343,6 +346,7 @@
 @push('scripts')
 <script>
     const countries = @json($countries);
+    const rateHistory = @json($rateHistory);
     let currencyChart = null;
 
     function formatNumber(number) {
@@ -396,8 +400,9 @@
         return categoryTranslations[category] ?? category;
     }
 
-    function updateChart(risk) {
+    function updateChart(country) {
         const ctx = document.getElementById('currencyChart');
+        const history = rateHistory[country.currency_code] || [];
 
         if (currencyChart) {
             currencyChart.destroy();
@@ -406,17 +411,10 @@
         currencyChart = new Chart(ctx, {
             type: 'line',
             data: {
-                labels: ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun'],
+                labels: history.map(item => item.date),
                 datasets: [{
-                    label: 'Tren Risiko Mata Uang',
-                    data: [
-                        Math.max(risk - 10, 0),
-                        Math.max(risk - 5, 0),
-                        risk,
-                        Math.min(risk + 6, 100),
-                        Math.max(risk - 2, 0),
-                        Math.min(risk + 8, 100)
-                    ],
+                    label: '1 USD dalam ' + country.currency_code,
+                    data: history.map(item => item.rate),
                     tension: 0.4,
                     borderWidth: 2
                 }]
@@ -425,8 +423,7 @@
                 responsive: true,
                 scales: {
                     y: {
-                        beginAtZero: true,
-                        max: 100
+                        beginAtZero: false
                     }
                 }
             }
@@ -435,7 +432,8 @@
 
     function updateCurrencyUI(country, exchangeRate, source) {
         const importValue =
-            parseFloat(document.getElementById('importValue').value) || 0;
+            Math.max(parseFloat(document.getElementById('importValue').value) || 0, 0);
+        document.getElementById('importValue').value = importValue;
 
         const convertedValue = importValue * exchangeRate;
         const risk = parseFloat(country.currency_risk);
@@ -518,46 +516,35 @@
         riskBox.className = riskInfo.alert;
         riskBox.innerText = riskInfo.message;
 
-        updateChart(risk);
+        updateChart(country);
     }
 
-    async function calculateCurrencyImpact() {
+    function calculateCurrencyImpact() {
         const selectedIndex =
             document.getElementById('countrySelect').value;
 
         const country = countries[selectedIndex];
 
-        document.getElementById('dataSource').innerText =
-            'Memuat Exchange Rate API...';
-
-        try {
-            const response = await fetch(
-                'https://open.er-api.com/v6/latest/USD'
-            );
-
-            const data = await response.json();
-
-            if (!data.rates || !data.rates[country.currency_code]) {
-                throw new Error('Mata uang tidak tersedia di API');
-            }
-
-            const apiRate = data.rates[country.currency_code];
-
-            updateCurrencyUI(
-                country,
-                apiRate,
-                'Exchange Rate API'
-            );
-        } catch (error) {
-            updateCurrencyUI(
-                country,
-                country.exchange_rate,
-                'Data simulasi cadangan'
-            );
+        if (!country || !country.exchange_rate) {
+            document.getElementById('riskBox').className =
+                'alert alert-warning mt-4 mb-0';
+            document.getElementById('riskBox').innerText =
+                'Kurs mata uang negara ini belum tersedia.';
+            return;
         }
+
+        updateCurrencyUI(
+            country,
+            Number(country.exchange_rate),
+            country.data_source
+        );
     }
 
     document.addEventListener('DOMContentLoaded', function () {
+        document.getElementById('countrySelect')
+            .addEventListener('change', calculateCurrencyImpact);
+        document.getElementById('importValue')
+            .addEventListener('input', calculateCurrencyImpact);
         calculateCurrencyImpact();
     });
 </script>

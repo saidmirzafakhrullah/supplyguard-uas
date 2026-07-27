@@ -43,7 +43,18 @@ class CurrencyController extends Controller
             ->values()
             ->toArray();
 
-        return view('currency.index', compact('countries', 'apiStatus'));
+        $rateHistory = ExchangeRate::query()
+            ->where('rate_date', '>=', now()->subDays(30)->toDateString())
+            ->orderBy('rate_date')
+            ->get(['currency_code', 'rate', 'rate_date'])
+            ->groupBy('currency_code')
+            ->map(fn ($items) => $items->map(fn (ExchangeRate $rate) => [
+                'date' => $rate->rate_date->format('d M'),
+                'rate' => (float) $rate->rate,
+            ])->values()->all())
+            ->all();
+
+        return view('currency.index', compact('countries', 'apiStatus', 'rateHistory'));
     }
 
     private function mapRestCountries(array $data)
@@ -125,6 +136,7 @@ class CurrencyController extends Controller
             $country['category'] = 'No Data';
             $country['badge'] = 'bg-secondary text-white';
             $country['recommendation'] = 'Currency data is not available for this country.';
+            $country['data_source'] = 'No Data';
 
             return $country;
         }
