@@ -208,4 +208,18 @@ class SupplyGuardCoreFeaturesTest extends TestCase
             );
     }
 
+    public function test_weather_page_uses_database_country_list(): void
+    {
+        $this->country();
+        Http::fake(['*open-meteo.com*' => Http::response([])]);
+
+        $this->actingAs(User::factory()->create())
+            ->get(route('weather.index'))
+            ->assertOk()
+            ->assertSee('Total negara tersedia:')
+            ->assertSee('<b>1</b>', false)
+            ->assertSee('Indonesia')
+            ->assertDontSee('Abkhazia');
+    }
+
 }

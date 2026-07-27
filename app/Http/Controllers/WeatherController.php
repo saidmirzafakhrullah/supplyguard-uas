@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Services\ApiLogService;
+use App\Services\RiskSnapshotService;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use RuntimeException;
@@ -55,6 +56,11 @@ class WeatherController extends Controller
      */
     private function getCountries(): array
     {
+        $databaseCountries = RiskSnapshotService::countries();
+        if (!empty($databaseCountries)) {
+            return $databaseCountries;
+        }
+
         return Cache::remember(
             'supplyguard.api.countries.v5',
             now()->addHours(12),
