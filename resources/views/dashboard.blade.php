@@ -4,9 +4,22 @@
 @section('page-title', 'Ringkasan Dasbor')
 
 @section('content')
+<div class="alert alert-info border-0 shadow-sm d-flex flex-wrap justify-content-between align-items-center gap-2 mb-4">
+    <div>
+        <i class="bi bi-database-check me-2"></i>{{ $apiStatus }}
+        <div class="small mt-1">Pembaruan data terakhir: <strong>{{ $latestDataAt }}</strong></div>
+    </div>
+    <div class="d-flex gap-2 flex-wrap">
+        <span class="badge bg-success">API berhasil: {{ $apiSummary['success_logs'] }}</span>
+        <span class="badge bg-danger">API gagal: {{ $apiSummary['failed_logs'] }}</span>
+        <span class="badge bg-primary">{{ $riskScopeCount }} negara dinilai</span>
+    </div>
+</div>
+
 <div class="row g-4">
     <div class="col-md-3">
-        <div class="card sg-card p-4">
+        <div class="card sg-card p-4 position-relative">
+            <a href="{{ route('countries.index') }}" class="stretched-link" aria-label="Buka Negara Global"></a>
             <div class="d-flex justify-content-between align-items-center">
                 <div>
                     <small class="text-muted">Negara Global</small>
@@ -21,7 +34,8 @@
     </div>
 
     <div class="col-md-3">
-        <div class="card sg-card p-4">
+        <div class="card sg-card p-4 position-relative">
+            <a href="{{ route('ports.index') }}" class="stretched-link" aria-label="Buka Lokasi Pelabuhan"></a>
             <div class="d-flex justify-content-between align-items-center">
                 <div>
                     <small class="text-muted">Pelabuhan Global</small>
@@ -36,7 +50,8 @@
     </div>
 
     <div class="col-md-3">
-        <div class="card sg-card p-4">
+        <div class="card sg-card p-4 position-relative">
+            <a href="{{ route('news.index') }}" class="stretched-link" aria-label="Buka Intelijen Berita"></a>
             <div class="d-flex justify-content-between align-items-center">
                 <div>
                     <small class="text-muted">Intelijen Berita</small>
@@ -51,7 +66,8 @@
     </div>
 
     <div class="col-md-3">
-        <div class="card sg-card p-4">
+        <div class="card sg-card p-4 position-relative">
+            <a href="{{ route('risk.index') }}" class="stretched-link" aria-label="Buka Penilaian Risiko"></a>
             <div class="d-flex justify-content-between align-items-center">
                 <div>
                     <small class="text-muted">Rata-rata Risiko</small>
@@ -104,7 +120,7 @@
             <div class="d-flex justify-content-between align-items-center mb-3">
                 <div>
                     <h5 class="fw-bold mb-0">Skor Risiko per Negara</h5>
-                    <small class="text-muted">Algoritma Pembobotan SG-Risk</small>
+                    <small class="text-muted">10 negara dengan skor tertinggi dari snapshot terbaru</small>
                 </div>
                 <span class="badge bg-primary">Chart.js</span>
             </div>
@@ -134,7 +150,7 @@
                 <div>
                     <h5 class="fw-bold mb-0">Peta Pemantauan Pelabuhan Global</h5>
                     <small class="text-muted">
-                        Dasbor lokasi pelabuhan interaktif menggunakan Leaflet.js
+                        Satu pelabuhan representatif per negara dari database
                     </small>
                 </div>
                 <span class="badge bg-success">Leaflet.js</span>
@@ -159,10 +175,16 @@
                     </thead>
 
                     <tbody>
-                    @foreach($latestNews as $item)
+                    @forelse($latestNews as $item)
                         <tr>
                             <td>
-                                <div class="fw-semibold">{{ $item['title'] }}</div>
+                                @if(!empty($item['url']))
+                                    <a href="{{ $item['url'] }}" target="_blank" rel="noopener noreferrer" class="fw-semibold text-decoration-none">
+                                        {{ $item['title'] }}
+                                    </a>
+                                @else
+                                    <div class="fw-semibold">{{ $item['title'] }}</div>
+                                @endif
 
                                 <small class="text-muted">
                                     Sentimen:
@@ -188,7 +210,9 @@
                                 @endif
                             </td>
                         </tr>
-                    @endforeach
+                    @empty
+                        <tr><td colspan="3" class="text-center text-muted py-4">Belum ada berita tersimpan.</td></tr>
+                    @endforelse
                     </tbody>
                 </table>
             </div>
@@ -257,48 +281,44 @@
         }
     });
 
-    const map = L.map('worldMap').setView([5, 110], 2);
+    const map = L.map('worldMap').setView([15, 20], 2);
 
     L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
         maxZoom: 7,
         attribution: '&copy; OpenStreetMap'
     }).addTo(map);
 
-    const ports = [
-        {
-            name: 'Pelabuhan Tanjung Priok',
-            country: 'Indonesia',
-            lat: -6.104,
-            lng: 106.880
-        },
-        {
-            name: 'Pelabuhan Shanghai',
-            country: 'Tiongkok',
-            lat: 31.230,
-            lng: 121.473
-        },
-        {
-            name: 'Pelabuhan Hamburg',
-            country: 'Jerman',
-            lat: 53.546,
-            lng: 9.966
-        },
-        {
-            name: 'Pelabuhan Singapura',
-            country: 'Singapura',
-            lat: 1.264,
-            lng: 103.840
-        }
-    ];
+    const ports = @json($mapPorts);
+
+    const riskColors = {
+        Low: '#198754',
+        Medium: '#ffc107',
+        High: '#dc3545',
+        Critical: '#212529'
+    };
 
     ports.forEach(port => {
-        L.marker([port.lat, port.lng])
+        L.circleMarker([port.lat, port.lng], {
+            radius: 6,
+            color: riskColors[port.risk] || '#0d6efd',
+            fillColor: riskColors[port.risk] || '#0d6efd',
+            fillOpacity: 0.85,
+            weight: 1
+        })
             .addTo(map)
             .bindPopup(`
                 <b>${port.name}</b><br>
                 Negara: ${port.country}<br>
-                Status: Aktif
+                Status: ${port.status}<br>
+                Risiko: ${port.risk}
             `);
     });
+
+    if (ports.length === 0) {
+        L.popup()
+            .setLatLng([15, 20])
+            .setContent('Belum ada data pelabuhan dengan koordinat valid.')
+            .openOn(map);
+    }
 </script>
 @endpush

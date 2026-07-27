@@ -6,7 +6,9 @@ use App\Models\ApiLog;
 use App\Models\Country;
 use App\Models\NewsCache;
 use App\Models\Port;
+use App\Models\RiskScore;
 use App\Services\RiskSnapshotService;
+use Carbon\Carbon;
 use Illuminate\Support\Facades\Cache;
 
 class DashboardController extends Controller
@@ -73,9 +75,6 @@ class DashboardController extends Controller
                     newsArticles: $newsArticles
                 );
             })
-            ->map(fn (array $country) =>
-                RiskSnapshotService::apply($country, $riskSnapshots)
-            )
             ->sortBy('name')
             ->values();
 
@@ -105,18 +104,35 @@ class DashboardController extends Controller
                 RiskSnapshotService::apply($country, $riskSnapshots)
             );
 
-        $riskLabels = $monitoredCountries
-            ->pluck('name')
-            ->values()
-            ->all();
+        $latestRiskScores = $riskSnapshots->values();
 
-        $riskData = $monitoredCountries
-            ->pluck('total_risk')
-            ->map(function ($risk) {
-                return round((float) $risk, 2);
-            })
-            ->values()
-            ->all();
+        if ($latestRiskScores->isNotEmpty()) {
+            $riskLabels = $latestRiskScores
+                ->sortByDesc('total_risk')
+                ->take(10)
+                ->pluck('country_name')
+                ->values()
+                ->all();
+
+            $riskData = $latestRiskScores
+                ->sortByDesc('total_risk')
+                ->take(10)
+                ->pluck('total_risk')
+                ->map(fn ($risk) => round((float) $risk, 2))
+                ->values()
+                ->all();
+        } else {
+            $riskLabels = $monitoredCountries->pluck('name')->values()->all();
+            $riskData = $monitoredCountries
+                ->pluck('total_risk')
+                ->map(fn ($risk) => round((float) $risk, 2))
+                ->values()
+                ->all();
+        }
+
+        $riskSummaryData = $latestRiskScores->isNotEmpty()
+            ? $latestRiskScores
+            : $monitoredCountries;
 
         $summary = [
             'countries' => Country::query()->count() ?: count($countries),
@@ -135,19 +151,19 @@ class DashboardController extends Controller
                 ?: count($cachedNewsArticles ?: $newsArticles),
 
             'average_risk' => round(
-                (float) $monitoredCountries->avg('total_risk'),
+                (float) $riskSummaryData->avg('total_risk'),
                 2
             ),
 
-            'low_risk' => $monitoredCountries
+            'low_risk' => $riskSummaryData
                 ->where('category', 'Low')
                 ->count(),
 
-            'medium_risk' => $monitoredCountries
+            'medium_risk' => $riskSummaryData
                 ->where('category', 'Medium')
                 ->count(),
 
-            'high_risk' => $monitoredCountries
+            'high_risk' => $riskSummaryData
                 ->whereIn('category', [
                     'High',
                     'Critical',
@@ -159,6 +175,41 @@ class DashboardController extends Controller
             $newsArticles,
             $monitoredCountries->all()
         );
+
+        $mapPorts = Port::query()
+            ->whereNotNull('latitude')
+            ->whereNotNull('longitude')
+            ->whereBetween('latitude', [-90, 90])
+            ->whereBetween('longitude', [-180, 180])
+            ->get(['port_name', 'country', 'country_code', 'latitude', 'longitude', 'status', 'risk_level'])
+            ->sortBy(fn (Port $port) => match ($port->risk_level) {
+                'critical' => 0, 'high' => 1, 'medium' => 2, default => 3,
+            })
+            ->unique('country_code')
+            ->take(250)
+            ->values()
+            ->map(fn (Port $port) => [
+                'name' => $port->port_name,
+                'country' => $port->country,
+                'lat' => $port->latitude,
+                'lng' => $port->longitude,
+                'status' => ucfirst($port->status),
+                'risk' => ucfirst($port->risk_level),
+            ])
+            ->all();
+
+        $latestDataValue = collect([
+            Country::query()->max('updated_at'),
+            Port::query()->max('updated_at'),
+            NewsCache::query()->max('fetched_at'),
+            RiskScore::query()->max('updated_at'),
+        ])->filter()->max();
+
+        $latestDataAt = $latestDataValue
+            ? Carbon::parse($latestDataValue)->timezone(config('app.timezone'))->format('d M Y H:i')
+            : 'Belum tersedia';
+
+        $riskScopeCount = $riskSummaryData->count();
 
         $apiSummary = [
             'total_logs' => ApiLog::query()->count(),
@@ -196,6 +247,9 @@ class DashboardController extends Controller
                 'riskLabels',
                 'riskData',
                 'latestNews',
+                'mapPorts',
+                'latestDataAt',
+                'riskScopeCount',
                 'apiSummary',
                 'apiStatus'
             )
@@ -331,6 +385,26 @@ class DashboardController extends Controller
      */
     private function getCachedNewsArticles(): array
     {
+        $databaseNews = NewsCache::query()
+            ->latest('published_at')
+            ->take(20)
+            ->get()
+            ->map(fn (NewsCache $article) => [
+                'title' => $article->title,
+                'description' => $article->description,
+                'url' => $article->url,
+                'source_name' => $article->source_name,
+                'published_at' => optional($article->published_at)->toISOString(),
+                'country_name' => $article->country_name,
+                'sentiment' => $article->sentiment,
+                'news_risk' => $article->news_risk,
+            ])
+            ->all();
+
+        if (!empty($databaseNews)) {
+            return $databaseNews;
+        }
+
         $cacheKeys = [
             'supplyguard.risk.gnews.v1',
             'supplyguard.watchlist.gnews.v1',
@@ -1198,16 +1272,21 @@ class DashboardController extends Controller
                     'title' => $article['title']
                         ?? 'Berita tanpa judul',
 
-                    'country' => $this->detectArticleCountry(
-                        $article,
-                        $countries
-                    ),
+                    'country' => $article['country_name']
+                        ?? $this->detectArticleCountry($article, $countries),
 
-                    'sentiment' =>
-                        $analysis['sentiment'],
+                    'sentiment' => $article['sentiment']
+                        ?? $analysis['sentiment'],
 
-                    'risk' =>
-                        $analysis['risk_category'],
+                    'risk' => isset($article['news_risk'])
+                        ? match (true) {
+                            (int) $article['news_risk'] >= 67 => 'High',
+                            (int) $article['news_risk'] >= 34 => 'Medium',
+                            default => 'Low',
+                        }
+                        : $analysis['risk_category'],
+
+                    'url' => $article['url'] ?? '',
                 ];
             })
             ->all();
@@ -1376,7 +1455,9 @@ class DashboardController extends Controller
         $activeSources = [];
 
         if (!empty($countries)) {
-            $activeSources[] = 'REST Countries';
+            $activeSources[] = Country::query()->exists()
+                ? 'database negara'
+                : 'REST Countries';
         }
 
         if (!empty($weatherData)) {

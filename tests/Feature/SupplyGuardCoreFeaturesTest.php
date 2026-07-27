@@ -171,4 +171,41 @@ class SupplyGuardCoreFeaturesTest extends TestCase
         }
     }
 
+    public function test_dashboard_uses_database_risk_port_and_news_data(): void
+    {
+        $this->country();
+        RiskScore::query()->create([
+            'country_code' => 'IDN', 'country_name' => 'Indonesia',
+            'weather_risk' => 70, 'inflation_risk' => 70,
+            'currency_risk' => 70, 'news_risk' => 70, 'port_risk' => 70,
+            'total_risk' => 70, 'category' => 'High',
+            'score_date' => now()->toDateString(), 'source' => 'Database',
+        ]);
+        Port::query()->create([
+            'port_name' => 'Tanjung Priok', 'country' => 'Indonesia',
+            'country_code' => 'IDN', 'latitude' => -6.104, 'longitude' => 106.88,
+            'status' => 'active', 'risk_level' => 'high',
+        ]);
+        NewsCache::query()->create([
+            'country_code' => 'IDN', 'country_name' => 'Indonesia',
+            'title' => 'Supply chain disruption in Indonesia',
+            'description' => 'Shipping and logistics update.',
+            'sentiment' => 'Negative', 'news_risk' => 80,
+            'source_name' => 'Test News', 'published_at' => now(),
+            'fetched_at' => now(),
+        ]);
+
+        $this->actingAs(User::factory()->create())->get(route('dashboard'))
+            ->assertOk()
+            ->assertSee('Tanjung Priok')
+            ->assertSee('Supply chain disruption in Indonesia')
+            ->assertViewHas('summary', fn (array $summary) =>
+                $summary['average_risk'] === 70.0
+                && $summary['high_risk'] === 1
+            )
+            ->assertViewHas('mapPorts', fn (array $ports) =>
+                count($ports) === 1 && $ports[0]['name'] === 'Tanjung Priok'
+            );
+    }
+
 }
